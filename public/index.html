@@ -17,54 +17,53 @@
         .edit-name-btn { cursor: pointer; transition: 0.2s; }
         .edit-name-btn:hover { color: var(--primary-color); }
 
-        /* ====== 视频区域 (主副窗口无缝切换) ====== */
-        .video-container { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; background: #1f1f1f; position: relative; overflow: hidden; }
-        .video-grid { display: flex; gap: 20px; width: 100%; height: 100%; max-width: 1200px; align-items: flex-start; justify-content: center; }
+        /* ====== 1. 响应式视频区域 ====== */
+        .video-container { flex: 1; padding: 15px; display: flex; flex-direction: column; align-items: center; background: #1f1f1f; position: relative; overflow: hidden; width: 100%;}
+        
+        /* 采用弹性盒子，填满容器 */
+        .video-grid { display: flex; gap: 15px; width: 100%; height: 100%; max-width: 1600px; justify-content: center; align-items: stretch; padding-bottom: 60px; /* 留出底部按钮空间 */ }
         
         .video-box { background: #000; border-radius: var(--radius); overflow: hidden; position: relative; cursor: pointer; border: 2px solid transparent; transition: all 0.25s ease; display: flex; flex-direction: column;}
-        .video-box video { width: 100%; height: 100%; object-fit: cover; display: block; flex: 1;}
+        .video-box video { width: 100%; height: 100%; object-fit: contain; display: block; flex: 1;}
         .video-label { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; line-height: 1.4; display: flex; flex-direction: column; gap: 2px; max-width: 90%; word-wrap: break-word; z-index: 2;}
 
-        /* 主视频（放大） */
-        .video-box.large, .video-box.default-main { width: 800px; height: 600px; flex: 0 0 auto; }
+        /* 主视频自适应：占据大部分空间 */
+        .video-box.large, .video-box.default-main { flex: 1; min-width: 0; height: 100%; max-height: 100%; }
 
-        /* 右侧侧栏容器 */
-        .video-sidebar { width: 220px; height: 600px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; align-self: flex-start; padding-right: 5px;}
-        .video-sidebar .video-box { width: 200px; height: 200px; min-height: 200px; flex-shrink: 0; }
+        /* 侧边栏自适应：按比例缩放 */
+        .video-sidebar { width: 25%; max-width: 280px; min-width: 150px; height: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px;}
+        .video-sidebar .video-box { width: 100%; height: auto; aspect-ratio: 16/9; flex-shrink: 0; min-height: unset;}
         .video-sidebar.empty { display: none; }
         .video-sidebar::-webkit-scrollbar { width: 6px; }
         .video-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
 
         .controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 50px; backdrop-filter: blur(10px); z-index: 11;}
-        .controls button { padding: 10px 20px; border-radius: 50px; border: none; cursor: pointer; background: rgba(255,255,255,0.2); color: white; transition: 0.3s; }
+        .controls button { padding: 10px 20px; border-radius: 50px; border: none; cursor: pointer; background: rgba(255,255,255,0.2); color: white; transition: 0.3s; white-space: nowrap;}
         .controls button.active { background: var(--primary-color); }
         .controls button.btn-danger.active { background: var(--danger-color); }
 
         /* ====== 底部功能区 ====== */
-        .bottom-panels { display: flex; height: 380px; border-top: 1px solid var(--border-color); background: var(--panel-bg); z-index: 5;}
-        .panel { flex: 1; padding: 20px 25px; border-right: 1px solid var(--border-color); overflow-y: auto; display: flex; flex-direction: column; }
-        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        .bottom-panels { display: flex; height: 350px; border-top: 1px solid var(--border-color); background: var(--panel-bg); z-index: 5;}
+        .panel { flex: 1; padding: 15px 20px; border-right: 1px solid var(--border-color); overflow-y: auto; display: flex; flex-direction: column; }
+        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
         .panel h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
         
-        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
         input[type="text"], input[type="number"] { flex: 1; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px; }
         button.styled-btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; background: var(--primary-color); color: white; }
         button.styled-btn.secondary { background: #f5f5f5; color: var(--text-main); border: 1px solid #d9d9d9; }
         button.styled-btn.danger { background: #fff1f0; color: var(--danger-color); border: 1px solid #ffccc7; }
         button:disabled { opacity: 0.5; cursor: not-allowed !important; }
 
-        /* 任务区 */
         #listsContainer { flex: 1; overflow-y: auto; }
         .task-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color); }
         .task-item.completed span { text-decoration: line-through; color: var(--text-secondary); }
 
-        /* 计时区 */
-        .timer-display { font-size: 56px; font-weight: 700; color: var(--primary-color); margin: 15px 0; text-align: center; font-variant-numeric: tabular-nums;}
+        .timer-display { font-size: 48px; font-weight: 700; color: var(--primary-color); margin: 10px 0; text-align: center; font-variant-numeric: tabular-nums;}
         .timer-status-bar { width: 100%; text-align: center; padding: 6px; border-radius: 4px; background: #f5f5f5; margin-bottom: 15px; font-size: 13px; transition: 0.3s;}
         .timer-settings { background: #fafafa; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         
-        /* 聊天室区 */
-        .chat-messages { flex: 1; overflow-y: auto; border: 1px solid var(--border-color); padding: 15px; margin-bottom: 12px; border-radius: 8px; background: #fafafa; display: flex; flex-direction: column; gap: 10px;}
+        .chat-messages { flex: 1; overflow-y: auto; border: 1px solid var(--border-color); padding: 12px; margin-bottom: 10px; border-radius: 8px; background: #fafafa; display: flex; flex-direction: column; gap: 10px;}
         .message { font-size: 14px; padding: 8px 12px; border-radius: 8px; background: white; border: 1px solid var(--border-color); align-self: flex-start; max-width: 90%; word-wrap: break-word;}
         .message.self { align-self: flex-end; background: var(--primary-color); color: white; border-color: var(--primary-color); }
         .message .msg-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;}
@@ -87,7 +86,7 @@
 
     <div class="video-container">
         <div class="video-grid" id="videoGrid">
-            <div class="video-box" id="localVideoBox" onclick="togglePin('localVideoBox')">
+            <div class="video-box default-main" id="localVideoBox" onclick="togglePin('localVideoBox')">
                 <video id="localVideo" autoplay muted playsinline></video>
                 <div class="video-label"><span>我 (未开启)</span></div>
             </div>
@@ -117,8 +116,8 @@
             
             <div class="timer-settings">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 14px;">专注(分): <input type="number" id="focusTime" value="25" style="width:120px; text-align:center;"></span>
-                    <span style="font-size: 14px;">休息(分): <input type="number" id="breakTime" value="5" style="width:120px; text-align:center;"></span>
+                    <span style="font-size: 14px;">专注(分): <input type="number" id="focusTime" value="25" style="width:100px; text-align:center;"></span>
+                    <span style="font-size: 14px;">休息(分): <input type="number" id="breakTime" value="5" style="width:100px; text-align:center;"></span>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     <button class="styled-btn" onclick="startPomodoro()">番茄钟</button>
@@ -156,21 +155,37 @@
 
         let myNickname = localStorage.getItem('study_nickname') || '同学';
 
-        // 布局状态
         let currentMainId = 'localVideoBox';
         let isLargeMode = false;
-
-        // 全局任务记录（针对“干它！”按钮）
         let currentFocusTask = ''; 
 
-        // WebRTC 状态
+        // WebRTC 核心状态
         let peerConnections = {}; 
-        let localStream = null;
+        let localStream = null;      // 关键：永远保存当前需要发给别人的所有流集合
         let cameraTrack = null; 
-        let screenAudioTrack = null; // 独立存储系统音频轨，防止和麦克风冲突
+        let micAudioTrack = null;
+        let screenAudioTrack = null; 
+        
         let isCamOpen = false;
         let isMicOpen = false;
         let isSharingScreen = false; 
+
+        // ====== 解决浏览器自动拦截音频的问题 ======
+        document.body.addEventListener('click', () => {
+            document.querySelectorAll('audio, video').forEach(media => {
+                if (media.paused && media.srcObject) media.play().catch(e => {});
+            });
+        }, { once: true });
+
+        // ====== 解决切后台画面/声音卡死问题 ======
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                document.querySelectorAll('video, audio').forEach(media => {
+                    if (media.paused && media.srcObject) media.play().catch(e => {});
+                });
+                setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
+            }
+        });
 
         window.onload = () => { 
             initSocket(); 
@@ -200,7 +215,6 @@
                 renderUserList(data.host);
                 updateAllVideoLabels();
 
-                // 禁言逻辑处理
                 const chatInput = document.getElementById('reflectionInput');
                 const chatBtn = document.getElementById('btnSendChat');
                 const imgBtn = document.querySelector('button[onclick="document.getElementById(\'imageInput\').click()"]');
@@ -224,10 +238,14 @@
                 appendMessage(msgData.userName, msgData.message, msgData.time, false, msgData.isImage);
             });
 
-            // WebRTC 信令
+            // 【中途加入防黑屏修复】新成员加入时，把当前 localStream 里所有的流打包发过去
             socket.on('user_joined', async (newUserId) => {
                 const pc = createPeerConnection(newUserId);
-                if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                if (localStream) {
+                    localStream.getTracks().forEach(track => {
+                        pc.addTrack(track, localStream);
+                    });
+                }
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 socket.emit('offer', { target: newUserId, caller: myUserId, sdp: offer });
@@ -236,7 +254,9 @@
             socket.on('offer', async (data) => {
                 const pc = createPeerConnection(data.caller);
                 await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                if (localStream) {
+                    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                }
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
                 socket.emit('answer', { target: data.caller, serval: myUserId, sdp: answer });
@@ -255,7 +275,6 @@
             socket.on('user_left', (userId) => { closePeerConnection(userId); });
         }
 
-        // ================= 权限与用户信息 =================
         function editNickname() {
             const newName = prompt("请输入新昵称 (2-10个字符)：", myNickname);
             if (newName && newName.trim().length >= 2 && newName.trim().length <= 10) {
@@ -275,11 +294,9 @@
                 const isMe = (id === myUserId);
                 const isThisUserHost = (id === hostId);
                 const customName = isMe ? myNickname : (roomDataFromServer.names[id] || `成员(${id.substring(0,4)})`); 
-                
                 const tag = document.createElement('span');
                 tag.className = 'user-tag';
                 tag.innerHTML = `${customName} ${isThisUserHost ? '<span class="host-badge">主持</span>' : ''}`;
-                
                 if (isHost && !isMe) {
                     tag.title = "点击移交主持人";
                     tag.onclick = () => { if(confirm(`移交主持人给 ${customName}？`)) socket.emit('transfer_host', id); };
@@ -301,41 +318,48 @@
                 const timerStatus = roomDataFromServer.timers[id] || '暂无专注任务';
                 const videoLabelStr = `<b>${customName}</b><span style="font-size:11px; color:#ddd;">${timerStatus}</span>`;
 
-                if (isMe) {
-                    const label = document.querySelector('#localVideoBox .video-label');
-                    if (label) label.innerHTML = videoLabelStr;
-                } else {
-                    const label = document.querySelector(`#box_${id} .video-label`);
-                    if (label) label.innerHTML = videoLabelStr;
-                }
+                const label = isMe ? document.querySelector('#localVideoBox .video-label') : document.querySelector(`#box_${id} .video-label`);
+                if (label) label.innerHTML = videoLabelStr;
             });
         }
 
         // ================= WebRTC 核心与修复 =================
+        // TURN 服务器配置预留位置 (解决非同一局域网黑屏问题)
+        const rtcConfig = { 
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                // 如果部署到外网后不同网络依然黑屏，请在此处申请并添加 TURN 服务凭证
+                // { urls: 'turn:your-turn-server.com:3478', username: 'user', credential: 'password' }
+            ] 
+        };
+
         function createPeerConnection(remoteUserId) {
             if (peerConnections[remoteUserId]) return peerConnections[remoteUserId];
-            const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+            const pc = new RTCPeerConnection(rtcConfig);
             peerConnections[remoteUserId] = pc;
             
+            // 【协商竞态条件修复】增加状态锁，防止并发触发重协商导致底层报错
+            let isNegotiating = false;
+            pc.onsignalingstatechange = () => { isNegotiating = (pc.signalingState !== "stable"); };
+
             pc.onicecandidate = (event) => {
                 if (event.candidate) socket.emit('ice-candidate', { target: remoteUserId, from: myUserId, candidate: event.candidate });
             };
 
-            // 修复：动态添加麦克风或屏幕音频时，触发重新协商
             pc.onnegotiationneeded = async () => {
+                if (isNegotiating) return;
+                isNegotiating = true;
                 try {
-                    console.log('[WebRTC 日志] 触发重新协商');
                     const offer = await pc.createOffer();
                     await pc.setLocalDescription(offer);
                     socket.emit('offer', { target: remoteUserId, caller: myUserId, sdp: pc.localDescription });
-                } catch (e) { console.error('协商失败', e); }
+                } catch (e) { console.error('协商失败', e); } finally {
+                    isNegotiating = false;
+                }
             };
 
-            // 核心修复：分离音频和视频播放，完美支持多音频轨 (麦克风+系统音)
             pc.ontrack = (event) => {
-                console.log(`[WebRTC 日志] 收到轨道: ${event.track.kind}`);
-                
-                // 单独处理音频轨道，创建独立的 <audio> 标签播放
                 if (event.track.kind === 'audio') {
                     let audioEl = document.getElementById(`audio_${event.track.id}`);
                     if (!audioEl) {
@@ -344,15 +368,12 @@
                         audioEl.autoplay = true;
                         audioEl.srcObject = new MediaStream([event.track]);
                         document.body.appendChild(audioEl);
-                        
                         event.track.onended = () => { if (audioEl) audioEl.remove(); };
                     }
                 }
 
-                // 处理视频轨道
                 let remoteVideoE = document.getElementById(`video_${remoteUserId}`);
                 if (!remoteVideoE) {
-                    // 对方的视频标签静音，避免和上面的独立 audio 标签声音重复
                     const html = `<div class="video-box" id="box_${remoteUserId}" onclick="togglePin('box_${remoteUserId}')">
                         <video id="video_${remoteUserId}" autoplay playsinline muted></video>
                         <div class="video-label"><span>加载中...</span></div>
@@ -361,13 +382,9 @@
                     remoteVideoE = document.getElementById(`video_${remoteUserId}`);
                 }
 
-                // 挂载新的媒体流
                 if (remoteVideoE.srcObject !== event.streams[0]) {
                     remoteVideoE.srcObject = event.streams[0];
                 }
-                
-                const boxEl = document.getElementById(`box_${remoteUserId}`);
-                if (boxEl) { boxEl.style.width = ''; boxEl.style.height = ''; boxEl.style.display = 'block'; }
                 
                 updateAllVideoLabels();
                 setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
@@ -382,21 +399,35 @@
             setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
         }
 
-        function replaceTrackInPeers(newTrack) {
-            console.log(`[WebRTC 日志] 准备同步轨道: ${newTrack.kind}`);
+        // 【同步修复的核心】：不仅仅通过 sender 替换发给老成员，还要把操作记录到 localStream 中，供新成员加入时读取
+        function updateTrackStatus(newTrack, trackType, isSystemAudio = false) {
+            if (!localStream) localStream = new MediaStream();
+            
+            // 找出属于该类型的旧轨道并移除
+            const oldTracks = localStream.getTracks().filter(t => {
+                if (t.kind !== trackType) return false;
+                if (trackType === 'audio') return isSystemAudio ? t === screenAudioTrack : t === micAudioTrack;
+                return true; 
+            });
+            oldTracks.forEach(t => localStream.removeTrack(t));
+
+            // 添加新轨道
+            if (newTrack) localStream.addTrack(newTrack);
+
+            // 更新所有现有的点对点连接
             Object.values(peerConnections).forEach(pc => {
                 const sender = pc.getSenders().find(s => {
                     if (!s.track) return false;
-                    // 防止麦克风轨道覆盖屏幕共享的系统音频轨道
-                    if (newTrack.kind === 'audio') {
-                        return s.track.kind === 'audio' && s.track !== screenAudioTrack;
+                    if (trackType === 'audio') {
+                        return isSystemAudio ? s.track === screenAudioTrack : s.track === micAudioTrack;
                     }
-                    return s.track.kind === newTrack.kind;
+                    return s.track.kind === trackType;
                 });
 
                 if (sender) {
-                    sender.replaceTrack(newTrack); 
-                } else if (localStream) {
+                    if (newTrack) sender.replaceTrack(newTrack);
+                    else pc.removeTrack(sender); 
+                } else if (newTrack) {
                     pc.addTrack(newTrack, localStream); // 触发 onnegotiationneeded
                 }
             });
@@ -409,13 +440,11 @@
 
             if (!isCamOpen) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
                     cameraTrack = stream.getVideoTracks()[0];
-                    if (!localStream) localStream = new MediaStream([cameraTrack]);
-                    else localStream.addTrack(cameraTrack);
                     
-                    document.getElementById('localVideo').srcObject = localStream;
-                    replaceTrackInPeers(cameraTrack); 
+                    document.getElementById('localVideo').srcObject = new MediaStream([cameraTrack]);
+                    updateTrackStatus(cameraTrack, 'video'); 
                     
                     isCamOpen = true;
                     btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
@@ -424,15 +453,16 @@
                 try {
                     if (cameraTrack) {
                         cameraTrack.enabled = false; cameraTrack.stop();
-                        if (localStream) localStream.removeTrack(cameraTrack);
+                        updateTrackStatus(null, 'video'); // 通知所有人并从 localStream 移除
                     }
                 } catch(e) {}
                 isCamOpen = false;
                 btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
                 
                 const lv = document.getElementById('localVideo');
-                if (!localStream || localStream.getVideoTracks().length === 0) {
-                    if (lv) lv.srcObject = null;
+                if (lv.srcObject) {
+                    lv.srcObject.getVideoTracks().forEach(t=>t.stop());
+                    lv.srcObject = null;
                 }
             }
         }
@@ -440,30 +470,24 @@
         async function toggleMic() {
             const btn = document.getElementById('btnMic');
             
-            if (!localStream || !localStream.getAudioTracks().find(t => t !== screenAudioTrack)) {
+            if (!micAudioTrack) {
                 try { 
                     const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
-                    const audioTrack = audioStream.getAudioTracks()[0];
-                    if (!localStream) localStream = new MediaStream();
-                    localStream.addTrack(audioTrack);
-                    audioTrack.enabled = false; // 初始静音
+                    micAudioTrack = audioStream.getAudioTracks()[0];
+                    micAudioTrack.enabled = false; 
                 } catch(e) { 
-                    return alert("无法获取麦克风权限，请检查浏览器设置或设备连接！");
+                    return alert("无法获取麦克风权限，请检查浏览器设置！");
                 }
             }
             
-            // 找到属于麦克风的音频轨
-            const audioTrack = localStream.getAudioTracks().find(t => t !== screenAudioTrack);
-            
             if (!isMicOpen) {
-                audioTrack.enabled = true;
-                console.log('[状态] 麦克风已开启');
-                replaceTrackInPeers(audioTrack); 
+                micAudioTrack.enabled = true;
+                updateTrackStatus(micAudioTrack, 'audio', false); 
                 isMicOpen = true;
                 btn.innerText = "🎤 关闭麦克风"; btn.classList.add('active');
             } else {
-                audioTrack.enabled = false;
-                console.log('[状态] 麦克风已关闭');
+                micAudioTrack.enabled = false;
+                updateTrackStatus(null, 'audio', false); 
                 isMicOpen = false;
                 btn.innerText = "🎤 开启麦克风"; btn.classList.remove('active');
             }
@@ -475,28 +499,20 @@
 
             if (!isSharingScreen) {
                 try {
-                    // 请求屏幕视频和系统音频
                     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                     const screenTrack = stream.getVideoTracks()[0];
-                    screenAudioTrack = stream.getAudioTracks()[0]; // 可能为空（如果用户未勾选分享音频）
+                    screenAudioTrack = stream.getAudioTracks()[0]; 
 
-                    if (!localStream) localStream = new MediaStream([screenTrack]);
                     document.getElementById('localVideo').srcObject = new MediaStream([screenTrack]);
                     
-                    // 同步视频轨道
-                    replaceTrackInPeers(screenTrack); 
-
-                    // 独立追加系统音频轨道
+                    updateTrackStatus(screenTrack, 'video'); 
                     if (screenAudioTrack) {
-                        console.log(`[状态] 捕获到系统音频`);
-                        Object.values(peerConnections).forEach(pc => {
-                            pc.addTrack(screenAudioTrack, localStream); 
-                        });
-                        screenAudioTrack.onended = () => { if (isSharingScreen) toggleScreenShare(); };
+                        updateTrackStatus(screenAudioTrack, 'audio', true); 
                     }
 
                     isSharingScreen = true;
                     btn.innerText = "💻 停止共享"; btn.classList.add('active');
+                    
                     screenTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
                 } catch (err) { console.log("取消共享"); }
             } else {
@@ -504,16 +520,14 @@
                     const src = document.getElementById('localVideo').srcObject;
                     if (src && src.getVideoTracks().length) src.getVideoTracks()[0].stop();
                     
-                    // 销毁并断开系统音频
+                    updateTrackStatus(null, 'video'); 
                     if (screenAudioTrack) {
                         screenAudioTrack.stop();
-                        Object.values(peerConnections).forEach(pc => {
-                            const sender = pc.getSenders().find(s => s.track === screenAudioTrack);
-                            if (sender) pc.removeTrack(sender); 
-                        });
+                        updateTrackStatus(null, 'audio', true); 
                         screenAudioTrack = null;
                     }
                 } catch(e) {}
+                
                 isSharingScreen = false;
                 btn.innerText = "💻 共享屏幕"; btn.classList.remove('active');
                 document.getElementById('localVideo').srcObject = null;
@@ -539,7 +553,7 @@
             if (!mainBox) return;
 
             existingBoxes.forEach(b => { 
-                b.style.width = ''; b.style.height = ''; b.style.display = 'block'; 
+                b.style.display = 'flex'; 
                 b.classList.remove('large', 'default-main'); 
             });
 
@@ -553,16 +567,12 @@
             const others = existingBoxes.filter(b => b.id !== mainBox.id);
 
             if (others.length === 0) sidebar.classList.add('empty');
-            
             others.forEach(b => { sidebar.appendChild(b); });
             grid.appendChild(sidebar);
 
-            // 修复：DOM 移动后恢复视频播放
             setTimeout(() => {
                 document.querySelectorAll('.video-box video').forEach(videoEl => {
-                    if (videoEl.paused && videoEl.srcObject) {
-                        videoEl.play().catch(e => console.log('自动播放恢复失败', e));
-                    }
+                    if (videoEl.paused && videoEl.srcObject) videoEl.play().catch(e => {});
                 });
             }, 100);
         }
@@ -573,7 +583,6 @@
         let isTimerRunning = false;
         let isTimerPaused = false; 
 
-        // 区分剩余时长和已计时长广播
         function broadcastTimerStatus(isPomodoro) {
             if (!socket) return;
             
@@ -586,8 +595,6 @@
             const taskName = currentFocusTask || (isPomodoro ? "番茄钟" : "正计时");
             const m = Math.floor(totalSeconds / 60);
             const s = totalSeconds % 60;
-            
-            // 番茄钟=剩余时长，正计时=已计时长
             const timeStr = isPomodoro ? `剩余${m}分${s}秒` : `已计时${m}分${s}秒`;
             const stateStr = isTimerPaused ? " (暂停)" : "";
             
@@ -597,12 +604,9 @@
         function updateDisplay(sec) {
             document.getElementById('timeDisplay').innerText = 
                 `${Math.floor(sec / 60).toString().padStart(2, '0')}:${(sec % 60).toString().padStart(2, '0')}`;
-            
-            // 每 10 秒广播一次最新时间进度，减少频繁通信，同时保证较高精度
             if (sec % 10 === 0) broadcastTimerStatus(document.getElementById('timerStatus').innerText.includes('🔥'));
         }
 
-        // 点击“干它！”设置当前专注任务
         function setFocusTask(taskName) {
             currentFocusTask = taskName;
             const statusEl = document.getElementById('timerStatus');
@@ -719,7 +723,6 @@
             document.getElementById(`taskInput_${listId}`).value = '';
         }
 
-        // 图片/GIF 上传转换
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -750,7 +753,6 @@
 
         function appendMessage(user, msg, time, isSelf, isImage = false) {
             const box = document.getElementById('chatBox');
-            // 点击图片可全屏查看
             const contentHtml = isImage ? `<img src="${msg}" onclick="window.open(this.src)">` : `<div>${msg}</div>`;
             box.insertAdjacentHTML('beforeend', `<div class="message ${isSelf ? 'self' : ''}"><div class="msg-meta">${user} ${time}</div>${contentHtml}</div>`);
             box.scrollTop = box.scrollHeight;
