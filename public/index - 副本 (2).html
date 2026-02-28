@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云端自习室 - 专注每一刻</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root { 
+            --bg-color: #f8f9fa; 
+            --panel-bg: #ffffff; 
+            --primary-color: #4299e1; 
+            --primary-light: #74b9ff;
+            --primary-hover: #3888d8; 
+            --danger-color: #e53e3e; 
+            --danger-hover: #c53030;
+            --warning-color: #ed8936;
+            --success-color: #48bb78;
+            --text-main: #2d3748; 
+            --text-secondary: #718096; 
+            --text-tertiary: #a0aec0;
+            --border-color: #e2e8f0; 
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+        }
+        
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+        }
+        
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden; 
+            line-height: 1.5;
+        }
+
+        /* ====== 右上角状态栏 ====== */
+        .top-bar { 
+            position: absolute; 
+            top: 20px; 
+            right: 20px; 
+            z-index: 20; 
+            display: flex; 
+            gap: 12px; 
+        }
+        
+        .stat-badge { 
+            background: rgba(0,0,0,0.7); 
+            color: white; 
+            padding: 8px 16px; 
+            border-radius: var(--radius-lg); 
+            font-size: 14px; 
+            backdrop-filter: blur(8px); 
+            border: 1px solid rgba(255,255,255,0.15); 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition-fast);
+        }
+        
+        .stat-badge:hover {
+            background: rgba(0,0,0,0.8);
+            transform: translateY(-1px);
+        }
+        
+        .host-badge { 
+            background: var(--warning-color); 
+            color: white; 
+            padding: 2px 8px; 
+            border-radius: var(--radius-sm); 
+            font-size: 11px; 
+            margin-left: 6px; 
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(237,137,54,0.3);
+        }
+        
+        .edit-name-btn { 
+            cursor: pointer; 
+            transition: var(--transition-fast); 
+        }
+        
+        .edit-name-btn:hover { 
+            color: var(--primary-light);
+            transform: translateY(-1px);
+        }
+
+        /* ====== 1. 响应式视频区域 ====== */
+        .video-container { 
+            flex: 1; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            position: relative; 
+            overflow: hidden; 
+            width: 100%;
+        }
+        
+        /* 采用弹性盒子，填满容器 */
+        .video-grid { 
+            display: flex; 
+            gap: 20px; 
+            width: 100%; 
+            height: 100%; 
+            max-width: 1800px; 
+            justify-content: center; 
+            align-items: stretch; 
+            padding-bottom: 80px; /* 留出底部按钮空间 */ 
+        }
+        
+        .video-box { 
+            background: #0a0a0a; 
+            border-radius: var(--radius-md); 
+            overflow: hidden; 
+            position: relative; 
+            cursor: pointer; 
+            border: 2px solid transparent; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            flex-direction: column;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .video-box:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .video-box video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            display: block; 
+            flex: 1;
+        }
+        
+        .video-label { 
+            position: absolute; 
+            bottom: 12px; 
+            left: 12px; 
+            background: rgba(0,0,0,0.8); 
+            color: white; 
+            padding: 6px 10px; 
+            border-radius: var(--radius-sm); 
+            font-size: 13px; 
+            line-height: 1.4; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 3px; 
+            max-width: 90%; 
+            word-wrap: break-word; 
+            z-index: 2;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* 主视频自适应：占据大部分空间 */
+        .video-box.large, .video-box.default-main { 
+            flex: 1; 
+            min-width: 0; 
+            height: 100%; 
+            max-height: 100%; 
+        }
+
+        /* 侧边栏自适应：按比例缩放 */
+        .video-sidebar { 
+            width: 25%; 
+            max-width: 300px; 
+            min-width: 180px; 
+            height: 100%; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            overflow-y: auto; 
+            padding-right: 8px;
+        }
+        
+        .video-sidebar .video-box { 
+            width: 100%; 
+            height: auto; 
+            aspect-ratio: 16/9; 
+            flex-shrink: 0; 
+            min-height: unset;
+        }
+        
+        .video-sidebar.empty { 
+            display: none; 
+        }
+        
+        .video-sidebar::-webkit-scrollbar { 
+            width: 8px; 
+        }
+        
+        .video-sidebar::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        
+        .video-sidebar::-webkit-scrollbar-thumb { 
+            background: rgba(255,255,255,0.2); 
+            border-radius: 4px;
+            transition: var(--transition-fast);
+        }
+        
+        .video-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .controls { 
+            position: absolute; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            display: flex; 
+            gap: 15px; 
+            background: rgba(0,0,0,0.6); 
+            padding: 12px 24px; 
+            border-radius: var(--radius-lg); 
+            backdrop-filter: blur(12px); 
+            z-index: 11;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .controls button { 
+            padding: 12px 24px; 
+            border-radius: var(--radius-lg); 
+            border: none; 
+            cursor: pointer; 
+            background: rgba(255,255,255,0.15); 
+            color: white; 
+            transition: var(--transition-normal); 
+            white-space: nowrap;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .controls button:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-2px);
+        }
+        
+        .controls button.active { 
+            background: var(--primary-color); 
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+        }
+        
+        .controls button.active:hover {
+            background: var(--primary-hover);
+        }
+        
+        .controls button.btn-danger.active { 
+            background: var(--danger-color);
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+        }
+        
+        .controls button.btn-danger.active:hover {
+            background: var(--danger-hover);
+        }
+
+        /* ====== 底部功能区 ====== */
+        .bottom-panels { 
+            display: flex; 
+            height: 380px; 
+            border-top: 1px solid var(--border-color); 
+            background: var(--panel-bg); 
+            z-index: 5;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .panel { 
+            flex: 1; 
+            padding: 20px; 
+            border-right: 1px solid var(--border-color); 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        
+        .panel:last-child {
+            border-right: none;
+        }
+        
+        .panel-header { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 18px; 
+            padding-bottom: 12px; 
+            border-bottom: 1px solid var(--border-color); 
+        }
+        
+        .panel h3 { 
+            font-size: 18px; 
+            font-weight: 600; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px;
+            color: var(--text-main);
+        }
+        
+        .input-group { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 15px; 
+            align-items: center;
+        }
+        
+        input[type="text"], input[type="number"] { 
+            flex: 1; 
+            padding: 10px 14px; 
+            border: 1px solid var(--border-color); 
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            transition: var(--transition-fast);
+            color: var(--text-main);
+            background-color: #fafafa;
+        }
+        
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            background-color: white;
+        }
+        
+        button.styled-btn { 
+            padding: 10px 18px; 
+            border-radius: var(--radius-sm); 
+            border: none; 
+            cursor: pointer; 
+            background: var(--primary-color); 
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        button.styled-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        button.styled-btn:active {
+            transform: translateY(0);
+        }
+        
+        button.styled-btn.secondary { 
+            background: #f7fafc; 
+            color: var(--text-main); 
+            border: 1px solid var(--border-color);
+        }
+        
+        button.styled-btn.secondary:hover {
+            background: #edf2f7;
+        }
+        
+        button.styled-btn.danger { 
+            background: #fef2f2; 
+            color: var(--danger-color); 
+            border: 1px solid #fecaca;
+        }
+        
+        button.styled-btn.danger:hover {
+            background: #fee2e2;
+        }
+        
+        button:disabled { 
+            opacity: 0.5; 
+            cursor: not-allowed !important; 
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        #listsContainer { 
+            flex: 1; 
+            overflow-y: auto; 
+        }
+        
+        #listsContainer::-webkit-scrollbar,
+        .panel::-webkit-scrollbar,
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        #listsContainer::-webkit-scrollbar-track,
+        .panel::-webkit-scrollbar-track,
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        
+        #listsContainer::-webkit-scrollbar-thumb,
+        .panel::-webkit-scrollbar-thumb,
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--text-tertiary);
+            border-radius: 4px;
+        }
+        
+        #listsContainer::-webkit-scrollbar-thumb:hover,
+        .panel::-webkit-scrollbar-thumb:hover,
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+        
+        .task-item { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 10px 8px; 
+            border-bottom: 1px dashed var(--border-color); 
+            transition: var(--transition-fast);
+            border-radius: var(--radius-sm);
+            margin-bottom: 4px;
+        }
+        
+        .task-item:hover {
+            background-color: #f8fafc;
+            transform: translateX(2px);
+        }
+        
+        .task-item.completed span { 
+            text-decoration: line-through; 
+            color: var(--text-secondary); 
+        }
+        
+        .task-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .timer-display { 
+            font-size: 56px; 
+            font-weight: 700; 
+            color: var(--primary-color); 
+            margin: 15px 0; 
+            text-align: center; 
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 2px 4px rgba(66, 153, 225, 0.1);
+            letter-spacing: 1px;
+        }
+        
+        .timer-status-bar { 
+            width: 100%; 
+            text-align: center; 
+            padding: 10px; 
+            border-radius: var(--radius-sm); 
+            background: #f1f5f9; 
+            margin-bottom: 20px; 
+            font-size: 14px; 
+            transition: var(--transition-normal);
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+        }
+        
+        .timer-settings { 
+            background: #f8fafc; 
+            border: 1px solid var(--border-color); 
+            border-radius: var(--radius-md); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chat-messages { 
+            flex: 1; 
+            overflow-y: auto; 
+            border: 1px solid var(--border-color); 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: var(--radius-md); 
+            background: #fafafa; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px;
+        }
+        
+        .message { 
+            font-size: 14px; 
+            padding: 10px 14px; 
+            border-radius: var(--radius-md); 
+            background: white; 
+            border: 1px solid var(--border-color); 
+            align-self: flex-start; 
+            max-width: 85%; 
+            word-wrap: break-word;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition-fast);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.self { 
+            align-self: flex-end; 
+            background: var(--primary-color); 
+            color: white; 
+            border-color: var(--primary-color);
+        }
+        
+        .message .msg-meta { 
+            font-size: 12px; 
+            color: var(--text-secondary); 
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        
+        .message.self .msg-meta { 
+            color: rgba(255,255,255,0.9); 
+            text-align: right;
+        }
+        
+        .message img { 
+            max-width: 100%; 
+            border-radius: var(--radius-sm); 
+            margin-top: 8px; 
+            max-height: 250px; 
+            object-fit: contain; 
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+        
+        .message img:hover {
+            transform: scale(1.02);
+        }
+        
+        .user-list { 
+            font-size: 13px; 
+            margin-bottom: 15px; 
+            display: flex; 
+            gap: 8px; 
+            flex-wrap: wrap; 
+        }
+        
+        .user-tag { 
+            background: #e6f7ff; 
+            color: var(--primary-color); 
+            padding: 4px 12px; 
+            border-radius: var(--radius-lg); 
+            border: 1px solid #91d5ff; 
+            cursor: pointer;
+            transition: var(--transition-fast);
+            font-weight: 500;
+        }
+        
+        .user-tag:hover {
+            background: #f0f8ff;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="stat-badge edit-name-btn" onclick="editNickname()" title="点击修改昵称">
+            <span id="myNameDisplay">加载中...</span> ✏️
+        </div>
+        <div class="stat-badge" id="hostStatusBadge" style="display:none; background: #faad14;">👑 主持人</div>
+        <div class="stat-badge">👥 在线人数: <span id="userCountDisplay">1</span></div>
+    </div>
+
+    <div class="video-container">
+        <div class="video-grid" id="videoGrid">
+            <div class="video-box default-main" id="localVideoBox" onclick="togglePin('localVideoBox')">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="video-label"><span>我 (未开启)</span></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="btnMic" onclick="toggleMic()">🎤 开启麦克风</button>
+            <button id="btnCam" onclick="toggleCam()">📷 开启摄像头</button>
+            <button id="btnScreen" onclick="toggleScreenShare()" class="btn-danger">💻 共享屏幕</button>
+        </div>
+    </div>
+
+    <div class="bottom-panels">
+        <div class="panel" id="taskPanel">
+            <div class="panel-header"><h3>📋 任务清单</h3></div>
+            <div class="input-group">
+                <input type="text" id="newListInput" placeholder="输入清单名称...">
+                <button class="styled-btn" onclick="createList()">新建</button>
+            </div>
+            <div id="listsContainer"></div>
+        </div>
+
+        <div class="panel" id="timerPanel">
+            <div class="panel-header"><h3>⏱️ 专注计时</h3></div>
+            <div class="timer-display" id="timeDisplay">25:00</div>
+            <div class="timer-status-bar" id="timerStatus">准备就绪</div>
+            
+            <div class="timer-settings">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span style="font-size: 14px;">专注(分): <input type="number" id="focusTime" value="25" style="width:100px; text-align:center;"></span>
+                    <span style="font-size: 14px;">休息(分): <input type="number" id="breakTime" value="5" style="width:100px; text-align:center;"></span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button class="styled-btn" onclick="startPomodoro()">番茄钟</button>
+                    <button class="styled-btn secondary" onclick="startStopwatch()">正计时</button>
+                    <button class="styled-btn" id="btnPause" onclick="togglePauseTimer()" style="display:none; background:#faad14;">暂停</button>
+                    <button class="styled-btn danger" onclick="stopTimer()">停止</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" id="reflectionPanel">
+            <div class="panel-header">
+                <h3>💬 聊天室</h3>
+                <button id="hostChatToggleBtn" class="styled-btn danger" style="display:none; padding: 4px 8px; font-size: 12px;" onclick="toggleRoomChat()">禁言全员</button>
+            </div>
+            <div class="user-list" id="userListContainer"></div>
+            <div class="chat-messages" id="chatBox"></div>
+            
+            <div class="input-group">
+                <input type="file" id="imageInput" accept="image/png, image/jpeg, image/gif" style="display: none;" onchange="handleImageUpload(event)">
+                <button class="styled-btn secondary" onclick="document.getElementById('imageInput').click()" title="发送图片/GIF">🖼️</button>
+                <input type="text" id="reflectionInput" placeholder="发送消息...">
+                <button class="styled-btn" id="btnSendChat" onclick="sendReflection()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ROOM_ID = 'default_study_room';
+        let socket;
+        let myUserId;
+        let isHost = false;
+        let roomUsers = [];
+        let roomDataFromServer = { names: {}, timers: {} };
+
+        let myNickname = localStorage.getItem('study_nickname') || '同学';
+
+        let currentMainId = 'localVideoBox';
+        let isLargeMode = false;
+        let currentFocusTask = ''; 
+
+        // WebRTC 核心状态
+        let peerConnections = {}; 
+        let localStream = null;      // 关键：永远保存当前需要发给别人的所有流集合
+        let cameraTrack = null; 
+        let micAudioTrack = null;
+        let screenAudioTrack = null; 
+        
+        let isCamOpen = false;
+        let isMicOpen = false;
+        let isSharingScreen = false; 
+
+        // ====== 解决浏览器自动拦截音频的问题 ======
+        document.body.addEventListener('click', () => {
+            document.querySelectorAll('audio, video').forEach(media => {
+                if (media.paused && media.srcObject) media.play().catch(e => {});
+            });
+        }, { once: true });
+
+        // ====== 解决切后台画面/声音卡死问题 ======
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                document.querySelectorAll('video, audio').forEach(media => {
+                    if (media.paused && media.srcObject) media.play().catch(e => {});
+                });
+                setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
+            }
+        });
+
+        window.onload = () => { 
+            initSocket(); 
+            createList('今日目标'); 
+            arrangeLayout(currentMainId, isLargeMode); 
+        };
+
+        function initSocket() {
+            socket = io();
+
+            socket.on('connect', () => {
+                myUserId = socket.id;
+                document.getElementById('myNameDisplay').innerText = myNickname;
+                socket.emit('join_room', ROOM_ID);
+                socket.emit('update_name', myNickname); 
+            });
+
+            socket.on('room_update', (data) => {
+                roomDataFromServer = data; 
+                roomUsers = data.users;
+                document.getElementById('userCountDisplay').innerText = roomUsers.length;
+                
+                isHost = (data.host === myUserId);
+                document.getElementById('hostStatusBadge').style.display = isHost ? 'flex' : 'none';
+                document.getElementById('hostChatToggleBtn').style.display = isHost ? 'block' : 'none';
+                
+                renderUserList(data.host);
+                updateAllVideoLabels();
+
+                const chatInput = document.getElementById('reflectionInput');
+                const chatBtn = document.getElementById('btnSendChat');
+                const imgBtn = document.querySelector('button[onclick="document.getElementById(\'imageInput\').click()"]');
+                const toggleBtn = document.getElementById('hostChatToggleBtn');
+                
+                if (!data.chatEnabled && !isHost) {
+                    chatInput.disabled = true; chatBtn.disabled = true; imgBtn.disabled = true;
+                    chatInput.placeholder = "主持人已关闭聊天室";
+                } else {
+                    chatInput.disabled = false; chatBtn.disabled = false; imgBtn.disabled = false;
+                    chatInput.placeholder = "发送消息...";
+                }
+                
+                if (isHost) {
+                    toggleBtn.innerText = data.chatEnabled ? "禁言全员" : "解除禁言";
+                    toggleBtn.className = data.chatEnabled ? "styled-btn danger" : "styled-btn";
+                }
+            });
+
+            socket.on('chat_message', (msgData) => {
+                appendMessage(msgData.userName, msgData.message, msgData.time, false, msgData.isImage);
+            });
+
+            // 【中途加入防黑屏修复】新成员加入时，把当前 localStream 里所有的流打包发过去
+            socket.on('user_joined', async (newUserId) => {
+                const pc = createPeerConnection(newUserId);
+                if (localStream) {
+                    localStream.getTracks().forEach(track => {
+                        pc.addTrack(track, localStream);
+                    });
+                }
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                socket.emit('offer', { target: newUserId, caller: myUserId, sdp: offer });
+            });
+            
+            socket.on('offer', async (data) => {
+                const pc = createPeerConnection(data.caller);
+                await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                if (localStream) {
+                    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                }
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                socket.emit('answer', { target: data.caller, serval: myUserId, sdp: answer });
+            });
+            
+            socket.on('answer', async (data) => {
+                const pc = peerConnections[data.serval];
+                if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            });
+            
+            socket.on('ice-candidate', async (data) => {
+                const pc = peerConnections[data.from];
+                if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            });
+            
+            socket.on('user_left', (userId) => { closePeerConnection(userId); });
+        }
+
+        function editNickname() {
+            const newName = prompt("请输入新昵称 (2-10个字符)：", myNickname);
+            if (newName && newName.trim().length >= 2 && newName.trim().length <= 10) {
+                myNickname = newName.trim();
+                localStorage.setItem('study_nickname', myNickname);
+                document.getElementById('myNameDisplay').innerText = myNickname;
+                socket.emit('update_name', myNickname);
+            } else if (newName !== null) {
+                alert("昵称长度需在 2 到 10 个字符之间！");
+            }
+        }
+
+        function renderUserList(hostId) {
+            const container = document.getElementById('userListContainer');
+            container.innerHTML = '';
+            roomUsers.forEach(id => {
+                const isMe = (id === myUserId);
+                const isThisUserHost = (id === hostId);
+                const customName = isMe ? myNickname : (roomDataFromServer.names[id] || `成员(${id.substring(0,4)})`); 
+                const tag = document.createElement('span');
+                tag.className = 'user-tag';
+                tag.innerHTML = `${customName} ${isThisUserHost ? '<span class="host-badge">主持</span>' : ''}`;
+                if (isHost && !isMe) {
+                    tag.title = "点击移交主持人";
+                    tag.onclick = () => { if(confirm(`移交主持人给 ${customName}？`)) socket.emit('transfer_host', id); };
+                }
+                container.appendChild(tag);
+            });
+        }
+
+        function toggleRoomChat() {
+            const btn = document.getElementById('hostChatToggleBtn');
+            const isCurrentlyEnabled = btn.innerText === "禁言全员";
+            socket.emit('toggle_chat', !isCurrentlyEnabled);
+        }
+
+        function updateAllVideoLabels() {
+            roomUsers.forEach(id => {
+                const isMe = (id === myUserId);
+                const customName = isMe ? myNickname : (roomDataFromServer.names[id] || `成员(${id.substring(0,4)})`);
+                const timerStatus = roomDataFromServer.timers[id] || '暂无专注任务';
+                const videoLabelStr = `<b>${customName}</b><span style="font-size:11px; color:#ddd;">${timerStatus}</span>`;
+
+                const label = isMe ? document.querySelector('#localVideoBox .video-label') : document.querySelector(`#box_${id} .video-label`);
+                if (label) label.innerHTML = videoLabelStr;
+            });
+        }
+
+        // ================= WebRTC 核心与修复 =================
+        // TURN 服务器配置预留位置 (解决非同一局域网黑屏问题)
+        const rtcConfig = { 
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                // 如果部署到外网后不同网络依然黑屏，请在此处申请并添加 TURN 服务凭证
+                // { urls: 'turn:your-turn-server.com:3478', username: 'user', credential: 'password' }
+            ] 
+        };
+
+        function createPeerConnection(remoteUserId) {
+            if (peerConnections[remoteUserId]) return peerConnections[remoteUserId];
+            const pc = new RTCPeerConnection(rtcConfig);
+            peerConnections[remoteUserId] = pc;
+            
+            // 【协商竞态条件修复】增加状态锁，防止并发触发重协商导致底层报错
+            let isNegotiating = false;
+            pc.onsignalingstatechange = () => { isNegotiating = (pc.signalingState !== "stable"); };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) socket.emit('ice-candidate', { target: remoteUserId, from: myUserId, candidate: event.candidate });
+            };
+
+            pc.onnegotiationneeded = async () => {
+                if (isNegotiating) return;
+                isNegotiating = true;
+                try {
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    socket.emit('offer', { target: remoteUserId, caller: myUserId, sdp: pc.localDescription });
+                } catch (e) { console.error('协商失败', e); } finally {
+                    isNegotiating = false;
+                }
+            };
+
+            pc.ontrack = (event) => {
+                if (event.track.kind === 'audio') {
+                    let audioEl = document.getElementById(`audio_${event.track.id}`);
+                    if (!audioEl) {
+                        audioEl = document.createElement('audio');
+                        audioEl.id = `audio_${event.track.id}`;
+                        audioEl.autoplay = true;
+                        audioEl.srcObject = new MediaStream([event.track]);
+                        document.body.appendChild(audioEl);
+                        event.track.onended = () => { if (audioEl) audioEl.remove(); };
+                    }
+                }
+
+                let remoteVideoE = document.getElementById(`video_${remoteUserId}`);
+                if (!remoteVideoE) {
+                    const html = `<div class="video-box" id="box_${remoteUserId}" onclick="togglePin('box_${remoteUserId}')">
+                        <video id="video_${remoteUserId}" autoplay playsinline muted></video>
+                        <div class="video-label"><span>加载中...</span></div>
+                    </div>`;
+                    document.getElementById('videoGrid').insertAdjacentHTML('beforeend', html);
+                    remoteVideoE = document.getElementById(`video_${remoteUserId}`);
+                }
+
+                if (remoteVideoE.srcObject !== event.streams[0]) {
+                    remoteVideoE.srcObject = event.streams[0];
+                }
+                
+                updateAllVideoLabels();
+                setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
+            };
+            return pc;
+        }
+
+        function closePeerConnection(userId) {
+            if (peerConnections[userId]) { peerConnections[userId].close(); delete peerConnections[userId]; }
+            const box = document.getElementById(`box_${userId}`);
+            if (box) box.remove();
+            setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
+        }
+
+        // 【同步修复的核心】：不仅仅通过 sender 替换发给老成员，还要把操作记录到 localStream 中，供新成员加入时读取
+        function updateTrackStatus(newTrack, trackType, isSystemAudio = false) {
+            if (!localStream) localStream = new MediaStream();
+            
+            // 找出属于该类型的旧轨道并移除
+            const oldTracks = localStream.getTracks().filter(t => {
+                if (t.kind !== trackType) return false;
+                if (trackType === 'audio') return isSystemAudio ? t === screenAudioTrack : t === micAudioTrack;
+                return true; 
+            });
+            oldTracks.forEach(t => localStream.removeTrack(t));
+
+            // 添加新轨道
+            if (newTrack) localStream.addTrack(newTrack);
+
+            // 更新所有现有的点对点连接
+            Object.values(peerConnections).forEach(pc => {
+                const sender = pc.getSenders().find(s => {
+                    if (!s.track) return false;
+                    if (trackType === 'audio') {
+                        return isSystemAudio ? s.track === screenAudioTrack : s.track === micAudioTrack;
+                    }
+                    return s.track.kind === trackType;
+                });
+
+                if (sender) {
+                    if (newTrack) sender.replaceTrack(newTrack);
+                    else pc.removeTrack(sender); 
+                } else if (newTrack) {
+                    pc.addTrack(newTrack, localStream); // 触发 onnegotiationneeded
+                }
+            });
+        }
+
+        // ================= 媒体设备控制 =================
+        async function toggleCam() {
+            const btn = document.getElementById('btnCam');
+            if (isSharingScreen && !isCamOpen) return alert("请先停止屏幕共享。");
+
+            if (!isCamOpen) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+                    cameraTrack = stream.getVideoTracks()[0];
+                    
+                    document.getElementById('localVideo').srcObject = new MediaStream([cameraTrack]);
+                    updateTrackStatus(cameraTrack, 'video'); 
+                    
+                    isCamOpen = true;
+                    btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
+                } catch (err) { alert("无法访问摄像头: " + err.message); }
+            } else {
+                try {
+                    if (cameraTrack) {
+                        cameraTrack.enabled = false; cameraTrack.stop();
+                        updateTrackStatus(null, 'video'); // 通知所有人并从 localStream 移除
+                    }
+                } catch(e) {}
+                isCamOpen = false;
+                btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
+                
+                const lv = document.getElementById('localVideo');
+                if (lv.srcObject) {
+                    lv.srcObject.getVideoTracks().forEach(t=>t.stop());
+                    lv.srcObject = null;
+                }
+            }
+        }
+
+        async function toggleMic() {
+            const btn = document.getElementById('btnMic');
+            
+            if (!micAudioTrack) {
+                try { 
+                    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+                    micAudioTrack = audioStream.getAudioTracks()[0];
+                    micAudioTrack.enabled = false; 
+                } catch(e) { 
+                    return alert("无法获取麦克风权限，请检查浏览器设置！");
+                }
+            }
+            
+            if (!isMicOpen) {
+                micAudioTrack.enabled = true;
+                updateTrackStatus(micAudioTrack, 'audio', false); 
+                isMicOpen = true;
+                btn.innerText = "🎤 关闭麦克风"; btn.classList.add('active');
+            } else {
+                micAudioTrack.enabled = false;
+                updateTrackStatus(null, 'audio', false); 
+                isMicOpen = false;
+                btn.innerText = "🎤 开启麦克风"; btn.classList.remove('active');
+            }
+        }
+
+        async function toggleScreenShare() {
+            const btn = document.getElementById('btnScreen');
+            if (isCamOpen && !isSharingScreen) await toggleCam(); 
+
+            if (!isSharingScreen) {
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                    const screenTrack = stream.getVideoTracks()[0];
+                    screenAudioTrack = stream.getAudioTracks()[0]; 
+
+                    document.getElementById('localVideo').srcObject = new MediaStream([screenTrack]);
+                    
+                    updateTrackStatus(screenTrack, 'video'); 
+                    if (screenAudioTrack) {
+                        updateTrackStatus(screenAudioTrack, 'audio', true); 
+                    }
+
+                    isSharingScreen = true;
+                    btn.innerText = "💻 停止共享"; btn.classList.add('active');
+                    
+                    screenTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
+                } catch (err) { console.log("取消共享"); }
+            } else {
+                try {
+                    const src = document.getElementById('localVideo').srcObject;
+                    if (src && src.getVideoTracks().length) src.getVideoTracks()[0].stop();
+                    
+                    updateTrackStatus(null, 'video'); 
+                    if (screenAudioTrack) {
+                        screenAudioTrack.stop();
+                        updateTrackStatus(null, 'audio', true); 
+                        screenAudioTrack = null;
+                    }
+                } catch(e) {}
+                
+                isSharingScreen = false;
+                btn.innerText = "💻 共享屏幕"; btn.classList.remove('active');
+                document.getElementById('localVideo').srcObject = null;
+            }
+        }
+
+        // ================= 视频布局与无缝切换 =================
+        function togglePin(boxId) {
+            if (currentMainId === boxId && isLargeMode) {
+                isLargeMode = false; currentMainId = 'localVideoBox';
+            } else {
+                currentMainId = boxId; isLargeMode = true;
+            }
+            arrangeLayout(currentMainId, isLargeMode);
+        }
+
+        function arrangeLayout(mainId, large) {
+            const grid = document.getElementById('videoGrid');
+            const existingBoxes = Array.from(document.querySelectorAll('.video-box'));
+            let mainBox = existingBoxes.find(b => b.id === mainId) || existingBoxes.find(b => b.id === 'localVideoBox') || existingBoxes[0] || null;
+
+            grid.innerHTML = '';
+            if (!mainBox) return;
+
+            existingBoxes.forEach(b => { 
+                b.style.display = 'flex'; 
+                b.classList.remove('large', 'default-main'); 
+            });
+
+            if (large) mainBox.classList.add('large'); 
+            else mainBox.classList.add('default-main');
+
+            grid.appendChild(mainBox);
+
+            const sidebar = document.createElement('div');
+            sidebar.className = 'video-sidebar';
+            const others = existingBoxes.filter(b => b.id !== mainBox.id);
+
+            if (others.length === 0) sidebar.classList.add('empty');
+            others.forEach(b => { sidebar.appendChild(b); });
+            grid.appendChild(sidebar);
+
+            setTimeout(() => {
+                document.querySelectorAll('.video-box video').forEach(videoEl => {
+                    if (videoEl.paused && videoEl.srcObject) videoEl.play().catch(e => {});
+                });
+            }, 100);
+        }
+
+        // ================= 番茄钟逻辑与任务同步 =================
+        let timerInterval;
+        let totalSeconds = 0; 
+        let isTimerRunning = false;
+        let isTimerPaused = false; 
+
+        function broadcastTimerStatus(isPomodoro) {
+            if (!socket) return;
+            
+            if (!isTimerRunning && !isTimerPaused) {
+                const idleText = currentFocusTask ? `待专注：${currentFocusTask}` : '暂无专注任务';
+                socket.emit('sync_timer', idleText);
+                return;
+            }
+            
+            const taskName = currentFocusTask || (isPomodoro ? "番茄钟" : "正计时");
+            const m = Math.floor(totalSeconds / 60);
+            const s = totalSeconds % 60;
+            const timeStr = isPomodoro ? `剩余${m}分${s}秒` : `已计时${m}分${s}秒`;
+            const stateStr = isTimerPaused ? " (暂停)" : "";
+            
+            socket.emit('sync_timer', `任务：${taskName} | ${timeStr}${stateStr}`);
+        }
+
+        function updateDisplay(sec) {
+            document.getElementById('timeDisplay').innerText = 
+                `${Math.floor(sec / 60).toString().padStart(2, '0')}:${(sec % 60).toString().padStart(2, '0')}`;
+            if (sec % 10 === 0) broadcastTimerStatus(document.getElementById('timerStatus').innerText.includes('🔥'));
+        }
+
+        function setFocusTask(taskName) {
+            currentFocusTask = taskName;
+            const statusEl = document.getElementById('timerStatus');
+            
+            if (isTimerRunning || isTimerPaused) {
+                const isPomodoro = statusEl.innerText.includes('🔥') || statusEl.innerText.includes('暂停');
+                alert(`已将当前专注任务无缝切换为：${taskName}`);
+                broadcastTimerStatus(isPomodoro);
+            } else {
+                statusEl.innerText = `🎯 待专注：${taskName}`;
+                statusEl.style.background = "#e6f7ff";
+                statusEl.style.color = "#1890ff";
+                broadcastTimerStatus(false); 
+            }
+        }
+
+        function startStopwatch() {
+            clearInterval(timerInterval);
+            totalSeconds = 0; isTimerRunning = true; isTimerPaused = false;
+            document.getElementById('timerStatus').innerText = "正计时中...";
+            document.getElementById('timerStatus').style.background = "#e6f7ff";
+            document.getElementById('timerStatus').style.color = "#1890ff";
+            document.getElementById('btnPause').style.display = 'inline-block';
+            document.getElementById('btnPause').innerText = '暂停';
+            
+            broadcastTimerStatus(false);
+            timerInterval = setInterval(() => {
+                if (!isTimerPaused) { totalSeconds++; updateDisplay(totalSeconds); }
+            }, 1000);
+        }
+
+        function startPomodoro() {
+            clearInterval(timerInterval);
+            const mins = parseInt(document.getElementById('focusTime').value) || 25;
+            totalSeconds = mins * 60; isTimerRunning = true; isTimerPaused = false;
+            
+            document.getElementById('timerStatus').innerText = "🔥 专注中...";
+            document.getElementById('timerStatus').style.background = "#fff1f0";
+            document.getElementById('timerStatus').style.color = "#cf1322";
+            document.getElementById('btnPause').style.display = 'inline-block';
+            document.getElementById('btnPause').innerText = '暂停';
+            updateDisplay(totalSeconds);
+            broadcastTimerStatus(true);
+            
+            timerInterval = setInterval(() => {
+                if (!isTimerPaused) {
+                    if (totalSeconds > 0) {
+                        totalSeconds--; updateDisplay(totalSeconds);
+                    } else {
+                        clearInterval(timerInterval); alert("专注结束！开始休息吧。");
+                    }
+                }
+            }, 1000);
+        }
+
+        function togglePauseTimer() {
+            if (!isTimerRunning) return;
+            isTimerPaused = !isTimerPaused;
+            const btn = document.getElementById('btnPause');
+            const status = document.getElementById('timerStatus');
+            const isPomodoro = status.innerText.includes('🔥') || status.innerText.includes('暂停');
+            
+            if (isTimerPaused) {
+                btn.innerText = "继续"; btn.style.background = '#52c41a';
+                status.innerText = "⏸️ 计时已暂停";
+                status.style.background = "#fffbe6"; status.style.color = "#d48806";
+            } else {
+                btn.innerText = "暂停"; btn.style.background = "#faad14";
+                if (isPomodoro) {
+                    status.innerText = "🔥 专注中...";
+                    status.style.background = "#fff1f0"; status.style.color = "#cf1322";
+                } else {
+                    status.innerText = "正计时中...";
+                    status.style.background = "#e6f7ff"; status.style.color = "#1890ff";
+                }
+            }
+            broadcastTimerStatus(isPomodoro); 
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            isTimerRunning = false; isTimerPaused = false;
+            document.getElementById('timerStatus').innerText = "已停止";
+            document.getElementById('timerStatus').style.background = "#f5f5f5";
+            document.getElementById('timerStatus').style.color = "var(--text-secondary)";
+            document.getElementById('btnPause').style.display = 'none';
+            broadcastTimerStatus(false);
+        }
+
+        // ================= 聊天室与任务 =================
+        function createList(name) {
+            const listId = `list_${Date.now()}`;
+            const html = `<div style="margin-bottom:15px; border:1px solid var(--border-color); padding:15px; border-radius:var(--radius-md); background:#f8fafc; box-shadow:var(--shadow-sm);">
+                <div style="font-weight:600; margin-bottom:10px; font-size:15px;">📂 ${name || '新清单'}</div>
+                <div style="display:flex; gap:8px;"><input type="text" id="taskInput_${listId}" placeholder="输入任务内容..."><button class="styled-btn" onclick="addTask('${listId}')">添加</button></div>
+                <div id="tasks_${listId}" style="margin-top:12px;"></div></div>`;
+            document.getElementById('listsContainer').insertAdjacentHTML('beforeend', html);
+        }
+        
+        function addTask(listId) {
+            const val = document.getElementById(`taskInput_${listId}`).value;
+            if(!val) return;
+            const taskId = `task_${Date.now()}`;
+            const html = `
+                <div class="task-item" id="${taskId}">
+                    <label style="flex:1; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" onclick="document.getElementById('${taskId}').classList.toggle('completed')"> 
+                        <span>${val}</span>
+                    </label>
+                    <button class="styled-btn" style="padding: 6px 12px; font-size: 13px; border-radius: var(--radius-sm); margin-left: 10px;" 
+                            onclick="setFocusTask('${val}')">干它！</button>
+                </div>`;
+            document.getElementById(`tasks_${listId}`).insertAdjacentHTML('beforeend', html);
+            document.getElementById(`taskInput_${listId}`).value = '';
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { 
+                alert('图片/GIF 大小不能超过 5MB！');
+                event.target.value = ''; return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64Data = e.target.result;
+                const timeStr = new Date().toLocaleTimeString();
+                appendMessage(myNickname, base64Data, timeStr, true, true);
+                if(socket) socket.emit('chat_message', { userName: isHost ? `👑主持人(${myNickname})` : myNickname, message: base64Data, time: timeStr, isImage: true });
+            };
+            reader.readAsDataURL(file);
+            event.target.value = ''; 
+        }
+
+        function sendReflection() {
+            const input = document.getElementById('reflectionInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            const timeStr = new Date().toLocaleTimeString();
+            appendMessage(myNickname, msg, timeStr, true, false);
+            if(socket) socket.emit('chat_message', { userName: isHost ? `👑主持人(${myNickname})` : myNickname, message: msg, time: timeStr, isImage: false });
+            input.value = '';
+        }
+
+        function appendMessage(user, msg, time, isSelf, isImage = false) {
+            const box = document.getElementById('chatBox');
+            const contentHtml = isImage ? `<img src="${msg}" onclick="window.open(this.src)">` : `<div>${msg}</div>`;
+            box.insertAdjacentHTML('beforeend', `<div class="message ${isSelf ? 'self' : ''}"><div class="msg-meta">${user} ${time}</div>${contentHtml}</div>`);
+            box.scrollTop = box.scrollHeight;
+        }
+        
+        const _refInput = document.getElementById('reflectionInput');
+        if (_refInput) _refInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendReflection(); });
+    </script>
+</body>
+</html>
