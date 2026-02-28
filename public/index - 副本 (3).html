@@ -33,6 +33,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         
         body { 
+            /* 现代风格渐变背景 */
             background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
             color: var(--text-main); 
             height: 100vh; 
@@ -40,6 +41,7 @@
             line-height: 1.5;
         }
 
+        /* ====== 全局卡片样式 ====== */
         .glass-card {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -53,6 +55,7 @@
             padding: 20px;
         }
 
+        /* ====== CSS Grid 核心布局 ====== */
         .app-layout {
             display: grid;
             grid-template-columns: 320px 1fr 340px;
@@ -69,8 +72,10 @@
         #timerDisplayCard { grid-column: 2; grid-row: 2; display: flex; flex-direction: row; gap: 20px; padding: 25px; }
         #chatCard { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; overflow: hidden; }
 
+        /* 将左侧的任务与计时设置微调上移 */
         #taskCard, #timerSettingsCard { transform: translateY(-33px); transition: transform 0.2s ease; z-index: 5; }
 
+        /* ====== 顶部中间控制栏 ====== */
         .top-center-controls {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             display: flex; gap: 15px; z-index: 20;
@@ -86,6 +91,7 @@
         .top-center-controls button.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
         .top-center-controls button.btn-danger.active { background: var(--danger-color); color: #fff; border-color: var(--danger-color); }
 
+        /* ====== 右上角状态栏 ====== */
         .top-bar { position: absolute; top: 20px; right: 20px; z-index: 20; display: flex; gap: 12px; }
         .stat-badge { 
             background: var(--glass-bg); backdrop-filter: blur(12px);
@@ -95,8 +101,8 @@
         }
         .host-badge { background: var(--warning-color); color: #fff; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; margin-left: 6px; }
 
+        /* ====== 视频区域 ====== */
         .video-grid { display: flex; gap: 15px; width: 100%; height: 100%; justify-content: center; align-items: stretch; }
-        
         .video-box { 
             background: #000; border-radius: var(--radius-sm); overflow: hidden; position: relative; 
             cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; display: flex; flex-direction: column; box-shadow: var(--shadow-md);
@@ -104,9 +110,6 @@
         .video-box:hover { border-color: var(--primary-light); transform: translateY(-2px); }
         .video-box video { width: 100%; height: 100%; object-fit: contain; flex: 1; }
         
-        /* 强制隐藏无画面的视频框 */
-        .video-box.no-video { display: none !important; }
-
         .video-label { 
             position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.6); 
             color: white; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; 
@@ -120,6 +123,7 @@
         .video-sidebar .video-box { width: 100%; height: auto; aspect-ratio: 16/9; flex-shrink: 0; }
         .video-sidebar.empty { display: none; }
 
+        /* ====== 通用组件 ====== */
         .panel-header h3 { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
         .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
         input[type="text"], input[type="number"] { 
@@ -137,11 +141,13 @@
         button.styled-btn.secondary { background: rgba(255,255,255,0.5); color: var(--text-main); border: 1px solid rgba(255,255,255,0.8); }
         button.styled-btn.danger { background: linear-gradient(135deg, var(--danger-color) 0%, var(--danger-hover) 100%); }
 
+        /* ====== 任务区 ====== */
         #listsContainer { flex: 1; overflow-y: auto; }
         .task-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.5); border-radius: var(--radius-sm); margin-bottom: 8px; transition: 0.2s; }
         .task-item:hover { background: rgba(255,255,255,0.8); transform: translateX(2px); }
         .task-item.completed span { text-decoration: line-through; color: var(--text-secondary); opacity: 0.6; }
 
+        /* ====== 计时概览区 ====== */
         .timer-main-area { flex: 0.9; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px dashed var(--border-color); padding-right: 20px; }
         .timer-stats-area { flex: 1.1; display: flex; flex-direction: column; gap: 15px; overflow: hidden; padding-left: 10px; }
         
@@ -153,6 +159,7 @@
         .stat-label { font-size: 13px; color: var(--text-secondary); }
         .stat-val { font-size: 26px; font-weight: bold; color: var(--text-main); line-height: 1; }
         
+        /* 时间轴 */
         .focus-timeline-container { flex: 1; overflow-y: auto; padding-left: 8px; margin-top: 5px; }
         .timeline-item { position: relative; padding-left: 20px; padding-bottom: 20px; border-left: 2px solid var(--primary-light); }
         .timeline-item:last-child { border-left: 2px solid transparent; }
@@ -164,28 +171,49 @@
         .audio-upload { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.1); }
         .audio-upload input[type="file"] { font-size: 12px; width: 100%; margin-top: 5px; }
 
+        /* ====== 在线成员列表 (带平滑高度过渡动画) ====== */
         .user-list { 
-            display: flex; flex-direction: column; gap: 8px; overflow-y: auto; 
-            max-height: 0; opacity: 0; margin-bottom: 0; padding-bottom: 0;
-            border-bottom: 0px dashed rgba(0,0,0,0.1); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            overflow-y: auto; 
+            max-height: 0; 
+            opacity: 0;
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: 0px dashed rgba(0,0,0,0.1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
         }
         .user-list.show { 
-            max-height: 40%; opacity: 1; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed rgba(0,0,0,0.1);
+            max-height: 40%; 
+            opacity: 1;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed rgba(0,0,0,0.1);
         }
         .user-list-item { 
-            background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; 
-            flex-direction: column; gap: 4px; border: 1px solid rgba(255,255,255,0.6); transition: 0.2s; flex-shrink: 0; 
+            background: rgba(255,255,255,0.5); 
+            padding: 8px 12px; 
+            border-radius: var(--radius-sm); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+            border: 1px solid rgba(255,255,255,0.6); 
+            transition: 0.2s;
+            flex-shrink: 0; 
         }
         .user-list-item:hover { background: rgba(255,255,255,0.8); }
         .user-list-name { font-size: 13px; font-weight: bold; color: var(--text-main); }
         .user-list-status { font-size: 11px; color: var(--text-secondary); }
 
+        /* ====== 聊天区 ====== */
         .chat-messages { flex: 1; overflow-y: auto; padding: 10px 5px; display: flex; flex-direction: column; gap: 12px; }
         .message { font-size: 14px; padding: 12px; border-radius: 12px 12px 12px 0; background: rgba(255,255,255,0.8); align-self: flex-start; max-width: 85%; word-wrap: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.05); user-select: none; }
         .message.self { align-self: flex-end; background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); color: white; border-radius: 12px 12px 0 12px; }
         .message .msg-meta { font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px; }
         .message.self .msg-meta { color: rgba(255,255,255,0.7); text-align: right; }
         .message img { max-width: 100%; border-radius: 8px; margin-top: 8px; cursor: pointer; }
+        
         .nudge-msg { text-align: center; font-size: 12px; color: #888; margin: 4px 0; background: none; box-shadow: none; align-self: center; padding: 0; border-radius: 0; }
 
         ::-webkit-scrollbar { width: 6px; }
@@ -245,7 +273,7 @@
 
         <div class="glass-card" id="videoCard">
             <div class="video-grid" id="videoGrid">
-                <div class="video-box default-main no-video" id="localVideoBox" onclick="togglePin('localVideoBox')">
+                <div class="video-box default-main" id="localVideoBox" onclick="togglePin('localVideoBox')">
                     <video id="localVideo" autoplay muted playsinline></video>
                     <div class="video-label">
                         <div class="video-info-text">
@@ -332,12 +360,11 @@
             }
         }
 
-        // WebRTC 状态核心变量重构
+        // WebRTC 状态
         let peerConnections = {}; 
         let localStream = null;      
         let cameraTrack = null; 
         let micAudioTrack = null;
-        let screenVideoTrack = null; 
         let screenAudioTrack = null; 
         let isCamOpen = false;
         let isMicOpen = false;
@@ -414,7 +441,6 @@
                 
                 renderUserList(data.host);
                 updateAllVideoLabels();
-                broadcastMediaStatus(); // 确保新成员能随时收到当前我的媒体状态
 
                 const chatInput = document.getElementById('reflectionInput');
                 const chatBtn = document.getElementById('btnSendChat');
@@ -428,11 +454,6 @@
             });
 
             socket.on('chat_message', (msgData) => {
-                // [核心修改] 监听远端的媒体状态系统指令，实时控制画面的折叠与显示
-                if (msgData.isSystem && msgData.action === 'media_status') {
-                    handleMediaStatusUpdate(msgData.userId, msgData.hasVideo);
-                    return;
-                }
                 if (msgData.isNudge) {
                     appendNudgeMessage(msgData.message);
                 } else {
@@ -441,43 +462,28 @@
             });
 
             socket.on('user_joined', async (newUserId) => {
-                createPeerConnection(newUserId);
-                // 向新连接的成员严格同步本地最新轨道池
-                if (localStream) {
-                    localStream.getTracks().forEach(track => {
-                        if (peerConnections[newUserId]) peerConnections[newUserId].addTrack(track, localStream);
-                    });
-                }
-                broadcastMediaStatus();
+                const pc = createPeerConnection(newUserId);
+                if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                socket.emit('offer', { target: newUserId, caller: myUserId, sdp: offer });
             });
-
             socket.on('offer', async (data) => {
                 const pc = createPeerConnection(data.caller);
                 await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                if (localStream) {
-                    localStream.getTracks().forEach(track => {
-                        const senders = pc.getSenders();
-                        if (!senders.some(s => s.track === track)) {
-                            pc.addTrack(track, localStream);
-                        }
-                    });
-                }
+                if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
                 socket.emit('answer', { target: data.caller, serval: myUserId, sdp: answer });
-                broadcastMediaStatus();
             });
-
             socket.on('answer', async (data) => {
                 const pc = peerConnections[data.serval];
                 if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
             });
-
             socket.on('ice-candidate', async (data) => {
                 const pc = peerConnections[data.from];
                 if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
             });
-
             socket.on('user_left', (userId) => { closePeerConnection(userId); });
         }
 
@@ -491,7 +497,7 @@
             }
         }
 
-        // 渲染侧边栏在线列表
+        // 渲染侧边栏在线列表，将自己置顶高亮
         function renderUserList(hostId) {
             const container = document.getElementById('userListContainer');
             container.innerHTML = '';
@@ -505,8 +511,9 @@
             sortedUsers.forEach(id => {
                 const item = document.createElement('div');
                 item.className = 'user-list-item';
-                if (id === myUserId) item.style.borderLeft = '4px solid var(--primary-color)';
-                
+                if (id === myUserId) {
+                    item.style.borderLeft = '4px solid var(--primary-color)';
+                }
                 item.innerHTML = `
                     <div class="user-list-name" id="list_name_${id}">加载中...</div>
                     <div class="user-list-status" id="list_status_${id}">加载中...</div>
@@ -524,11 +531,13 @@
                 const isPomodoro = document.getElementById('timerStatus').innerText.includes('🔥');
                 const timerStatus = isMe ? getTimerStatusString(isPomodoro) : (roomDataFromServer.timers[id] || '暂无专注任务');
                 
+                // 1. 更新视频区域
                 const labelContainer = isMe ? document.querySelector('#localVideoBox .video-info-text') : document.querySelector(`#box_${id} .video-info-text`);
                 if (labelContainer) {
                     labelContainer.innerHTML = `<div style="font-weight:bold; font-size:14px; margin-bottom:2px;">${customName}</div><div style="font-size:12px; color:#e2e8f0;">${timerStatus}</div>`;
                 }
 
+                // 2. 更新右侧成员列表
                 const listItemName = document.getElementById(`list_name_${id}`);
                 const listItemStatus = document.getElementById(`list_status_${id}`);
                 if (listItemName && listItemStatus) {
@@ -540,17 +549,10 @@
             });
         }
 
-        // [优化提升] 加入 iceCandidatePoolSize 提升同步连通速度
-        const rtcConfig = { 
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ],
-            iceCandidatePoolSize: 10
-        };
-
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         function adjustRemoteVolume(remoteUserId, value) {
-            document.querySelectorAll(`.user-audio-${remoteUserId}`).forEach(el => el.volume = parseFloat(value));
+            const audioEl = document.getElementById(`audio_${remoteUserId}`);
+            if (audioEl) audioEl.volume = parseFloat(value);
         }
 
         function createPeerConnection(remoteUserId) {
@@ -572,41 +574,32 @@
 
             pc.ontrack = (event) => {
                 if (event.track.kind === 'audio') {
-                    const audioId = `audio_${event.track.id}`;
-                    let audioEl = document.getElementById(audioId);
+                    let audioEl = document.getElementById(`audio_${remoteUserId}`);
                     if (!audioEl) {
                         audioEl = document.createElement('audio');
-                        audioEl.id = audioId; 
-                        audioEl.autoplay = true; 
-                        audioEl.className = `user-audio-${remoteUserId}`; 
-                        audioEl.srcObject = new MediaStream([event.track]);
+                        audioEl.id = `audio_${remoteUserId}`; audioEl.autoplay = true; audioEl.srcObject = new MediaStream([event.track]);
                         document.body.appendChild(audioEl);
                         event.track.onended = () => { if (audioEl) audioEl.remove(); };
                     }
                 }
-                
-                if (event.track.kind === 'video') {
-                    let remoteVideoE = document.getElementById(`video_${remoteUserId}`);
-                    if (!remoteVideoE) {
-                        const html = `<div class="video-box no-video" id="box_${remoteUserId}" onclick="togglePin('box_${remoteUserId}')">
-                            <video id="video_${remoteUserId}" autoplay playsinline muted></video>
-                            <div class="video-label">
-                                <div class="video-info-text">
-                                    <div style="font-weight:bold; font-size:14px; margin-bottom:2px;">加载中...</div>
-                                    <div style="font-size:12px; color:#e2e8f0;"></div>
-                                </div>
-                                <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" onclick="event.stopPropagation();" oninput="adjustRemoteVolume('${remoteUserId}', this.value)" title="调节音量">
+                let remoteVideoE = document.getElementById(`video_${remoteUserId}`);
+                if (!remoteVideoE) {
+                    const html = `<div class="video-box" id="box_${remoteUserId}" onclick="togglePin('box_${remoteUserId}')">
+                        <video id="video_${remoteUserId}" autoplay playsinline muted></video>
+                        <div class="video-label">
+                            <div class="video-info-text">
+                                <div style="font-weight:bold; font-size:14px; margin-bottom:2px;">加载中...</div>
+                                <div style="font-size:12px; color:#e2e8f0;"></div>
                             </div>
-                        </div>`;
-                        document.getElementById('videoGrid').insertAdjacentHTML('beforeend', html);
-                        remoteVideoE = document.getElementById(`video_${remoteUserId}`);
-                    }
-                    if (remoteVideoE.srcObject !== event.streams[0]) {
-                        remoteVideoE.srcObject = event.streams[0];
-                    }
-                    updateAllVideoLabels();
-                    setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
+                            <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" onclick="event.stopPropagation();" oninput="adjustRemoteVolume('${remoteUserId}', this.value)" title="调节音量">
+                        </div>
+                    </div>`;
+                    document.getElementById('videoGrid').insertAdjacentHTML('beforeend', html);
+                    remoteVideoE = document.getElementById(`video_${remoteUserId}`);
                 }
+                if (remoteVideoE.srcObject !== event.streams[0]) remoteVideoE.srcObject = event.streams[0];
+                updateAllVideoLabels();
+                setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
             };
             return pc;
         }
@@ -614,141 +607,75 @@
         function closePeerConnection(userId) {
             if (peerConnections[userId]) { peerConnections[userId].close(); delete peerConnections[userId]; }
             const box = document.getElementById(`box_${userId}`); if (box) box.remove();
-            document.querySelectorAll(`.user-audio-${userId}`).forEach(el => el.remove());
-            
-            if (currentMainId === `box_${userId}`) {
-                currentMainId = 'localVideoBox';
-                isLargeMode = false;
-            }
+            const audioEl = document.getElementById(`audio_${userId}`); if (audioEl) audioEl.remove();
             setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
         }
 
-        // [核心修改] 强制将最新画面推送到轨道池，绝不允许黑屏！
-        function syncTracksToPeers() {
+        function updateTrackStatus(newTrack, trackType, isSystemAudio = false) {
             if (!localStream) localStream = new MediaStream();
-            
-            // 完全清理并重建轨道
-            localStream.getTracks().forEach(t => localStream.removeTrack(t));
-            if (isCamOpen && cameraTrack) localStream.addTrack(cameraTrack);
-            if (isSharingScreen && screenVideoTrack) localStream.addTrack(screenVideoTrack);
-            if (isMicOpen && micAudioTrack) localStream.addTrack(micAudioTrack);
-            if (isSharingScreen && screenAudioTrack) localStream.addTrack(screenAudioTrack);
+            const oldTracks = localStream.getTracks().filter(t => {
+                if (t.kind !== trackType) return false;
+                if (trackType === 'audio') return isSystemAudio ? t === screenAudioTrack : t === micAudioTrack;
+                return true; 
+            });
+            oldTracks.forEach(t => localStream.removeTrack(t));
+            if (newTrack) localStream.addTrack(newTrack);
 
             Object.values(peerConnections).forEach(pc => {
-                const senders = pc.getSenders();
-                // 剔除失效轨道
-                senders.forEach(sender => {
-                    if (sender.track && !localStream.getTracks().includes(sender.track)) {
-                        pc.removeTrack(sender);
-                    }
+                const sender = pc.getSenders().find(s => {
+                    if (!s.track) return false;
+                    if (trackType === 'audio') return isSystemAudio ? s.track === screenAudioTrack : s.track === micAudioTrack;
+                    return s.track.kind === trackType;
                 });
-                // 增加新加入的活跃轨道
-                localStream.getTracks().forEach(track => {
-                    if (!senders.some(s => s.track === track)) {
-                        pc.addTrack(track, localStream);
-                    }
-                });
+                if (sender) { if (newTrack) sender.replaceTrack(newTrack); else pc.removeTrack(sender); } 
+                else if (newTrack) { pc.addTrack(newTrack, localStream); }
             });
-            broadcastMediaStatus();
-        }
-
-        // 广播UI状态：当成员画面关闭时，强制将他的方块消除
-        function broadcastMediaStatus() {
-            const hasV = isCamOpen || isSharingScreen;
-            if(socket) {
-                socket.emit('chat_message', { isSystem: true, action: 'media_status', userId: myUserId, hasVideo: hasV });
-            }
-            handleMediaStatusUpdate(myUserId, hasV);
-        }
-
-        function handleMediaStatusUpdate(userId, hasVideo) {
-            const boxId = userId === myUserId ? 'localVideoBox' : `box_${userId}`;
-            const box = document.getElementById(boxId);
-            if (box) {
-                if (hasVideo) {
-                    box.classList.remove('no-video');
-                } else {
-                    box.classList.add('no-video');
-                    if (currentMainId === boxId) {
-                        currentMainId = 'localVideoBox';
-                        isLargeMode = false;
-                    }
-                }
-                arrangeLayout(currentMainId, isLargeMode);
-            }
-        }
-
-        function updateLocalVideoSrc() {
-            const localVideo = document.getElementById('localVideo');
-            if (isSharingScreen && screenVideoTrack) {
-                localVideo.srcObject = new MediaStream([screenVideoTrack]);
-            } else if (isCamOpen && cameraTrack) {
-                localVideo.srcObject = new MediaStream([cameraTrack]);
-            } else {
-                localVideo.srcObject = null;
-            }
         }
 
         async function toggleCam() {
             const btn = document.getElementById('btnCam');
             if (!isCamOpen) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true }); 
-                    cameraTrack = stream.getVideoTracks()[0];
-                    cameraTrack.onended = () => { if(isCamOpen) toggleCam(); };
-                    isCamOpen = true; 
-                    btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
-                } catch (err) { return alert("无法访问摄像头: " + err.message); }
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true }); cameraTrack = stream.getVideoTracks()[0];
+                    document.getElementById('localVideo').srcObject = new MediaStream([cameraTrack]); updateTrackStatus(cameraTrack, 'video'); 
+                    isCamOpen = true; btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
+                } catch (err) { alert("无法访问摄像头!"); }
             } else {
-                if (cameraTrack) { cameraTrack.stop(); cameraTrack = null; }
-                isCamOpen = false; 
-                btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
+                try { if (cameraTrack) { cameraTrack.stop(); updateTrackStatus(null, 'video'); } } catch(e) {}
+                isCamOpen = false; btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
+                document.getElementById('localVideo').srcObject = null;
             }
-            updateLocalVideoSrc();
-            syncTracksToPeers();
         }
 
         async function toggleMic() {
             const btn = document.getElementById('btnMic');
-            if (!isMicOpen) {
-                try { 
-                    if (!micAudioTrack) {
-                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
-                        micAudioTrack = stream.getAudioTracks()[0]; 
-                        micAudioTrack.onended = () => { if(isMicOpen) toggleMic(); };
-                    }
-                    micAudioTrack.enabled = true;
-                    isMicOpen = true; 
-                    btn.innerText = "🎤 关闭麦克风"; btn.classList.add('active'); 
-                } catch(e) { return alert("无法获取麦克风权限！"); }
-            } else { 
-                if (micAudioTrack) { micAudioTrack.enabled = false; micAudioTrack.stop(); micAudioTrack = null; }
-                isMicOpen = false; 
-                btn.innerText = "🎤 开启麦克风"; btn.classList.remove('active'); 
+            if (!micAudioTrack) {
+                try { const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true }); micAudioTrack = audioStream.getAudioTracks()[0]; micAudioTrack.enabled = false; } 
+                catch(e) { return alert("无法获取麦克风权限！"); }
             }
-            syncTracksToPeers();
+            if (!isMicOpen) { micAudioTrack.enabled = true; updateTrackStatus(micAudioTrack, 'audio', false); isMicOpen = true; btn.innerText = "🎤 关闭麦克风"; btn.classList.add('active'); } 
+            else { micAudioTrack.enabled = false; updateTrackStatus(null, 'audio', false); isMicOpen = false; btn.innerText = "🎤 开启麦克风"; btn.classList.remove('active'); }
         }
 
         async function toggleScreenShare() {
             const btn = document.getElementById('btnScreen');
+            if (isCamOpen && !isSharingScreen) await toggleCam(); 
             if (!isSharingScreen) {
-                if (isCamOpen) await toggleCam(); // 屏幕共享和摄像头互斥
                 try {
                     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-                    screenVideoTrack = stream.getVideoTracks()[0]; 
-                    screenAudioTrack = stream.getAudioTracks()[0]; 
-                    screenVideoTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
-                    isSharingScreen = true; 
-                    btn.innerText = "💻 停止共享"; btn.classList.add('active');
-                } catch (err) { return; } 
+                    const screenTrack = stream.getVideoTracks()[0]; screenAudioTrack = stream.getAudioTracks()[0]; 
+                    document.getElementById('localVideo').srcObject = new MediaStream([screenTrack]); updateTrackStatus(screenTrack, 'video'); 
+                    if (screenAudioTrack) updateTrackStatus(screenAudioTrack, 'audio', true); 
+                    isSharingScreen = true; btn.innerText = "💻 停止共享"; btn.classList.add('active');
+                    screenTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
+                } catch (err) {}
             } else {
-                if (screenVideoTrack) { screenVideoTrack.stop(); screenVideoTrack = null; }
-                if (screenAudioTrack) { screenAudioTrack.stop(); screenAudioTrack = null; }
-                isSharingScreen = false; 
-                btn.innerText = "💻 共享屏幕"; btn.classList.remove('active'); 
+                try {
+                    const src = document.getElementById('localVideo').srcObject; if (src && src.getVideoTracks().length) src.getVideoTracks()[0].stop();
+                    updateTrackStatus(null, 'video'); if (screenAudioTrack) { screenAudioTrack.stop(); updateTrackStatus(null, 'audio', true); screenAudioTrack = null; }
+                } catch(e) {}
+                isSharingScreen = false; btn.innerText = "💻 共享屏幕"; btn.classList.remove('active'); document.getElementById('localVideo').srcObject = null;
             }
-            updateLocalVideoSrc();
-            syncTracksToPeers();
         }
 
         function togglePin(boxId) {
@@ -757,45 +684,22 @@
             arrangeLayout(currentMainId, isLargeMode);
         }
 
-        // [核心修改] 动态感知活跃的画面布局，没有画面的彻底从布局中剔除
         function arrangeLayout(mainId, large) {
             const grid = document.getElementById('videoGrid');
-            const allBoxes = Array.from(document.querySelectorAll('.video-box'));
-            
-            // 筛选出确实开启了视频（不带 no-video 类）的方块
-            const activeBoxes = allBoxes.filter(b => !b.classList.contains('no-video'));
+            const existingBoxes = Array.from(document.querySelectorAll('.video-box'));
+            let mainBox = existingBoxes.find(b => b.id === mainId) || existingBoxes.find(b => b.id === 'localVideoBox') || existingBoxes[0];
+            if (!mainBox) return;
 
-            // 将所有方块先暂离 DOM 以重塑结构
-            allBoxes.forEach(b => { if (b.parentNode) b.parentNode.removeChild(b); });
             grid.innerHTML = '';
-
-            // 如果全员都没有开启画面，显示占位文字
-            if (activeBoxes.length === 0) {
-                grid.innerHTML = '<div style="color:var(--text-tertiary); margin:auto; font-size:16px; font-weight: 500;">等待成员开启画面...</div>';
-                // 依然需要将隐藏的盒子挂载上去，以保证逻辑运转
-                allBoxes.filter(b => b.classList.contains('no-video')).forEach(b => { b.style.display = 'none'; grid.appendChild(b); });
-                return;
-            }
-
-            // 确立目前居中的主画面（如果是唯一的一个人，则他自然就是主画面）
-            let mainBox = activeBoxes.find(b => b.id === mainId) || activeBoxes.find(b => b.id === 'localVideoBox') || activeBoxes[0];
-            
-            activeBoxes.forEach(b => { b.style.display = 'flex'; b.classList.remove('large', 'default-main'); });
-            
+            existingBoxes.forEach(b => { b.style.display = 'flex'; b.classList.remove('large', 'default-main'); });
             large ? mainBox.classList.add('large') : mainBox.classList.add('default-main');
             grid.appendChild(mainBox);
 
-            const others = activeBoxes.filter(b => b.id !== mainBox.id);
+            const others = existingBoxes.filter(b => b.id !== mainBox.id);
             if (others.length > 0) {
                 const sidebar = document.createElement('div'); sidebar.className = 'video-sidebar';
                 others.forEach(b => sidebar.appendChild(b)); grid.appendChild(sidebar);
             }
-
-            // 将隐藏的盒子重新挂载（以备未来有画面时复活）
-            allBoxes.filter(b => b.classList.contains('no-video')).forEach(b => {
-                 b.style.display = 'none';
-                 grid.appendChild(b);
-            });
         }
 
         // ================= 状态、统计与记录生成 =================
@@ -941,6 +845,7 @@
             broadcastTimerStatus(isPomodoro); 
         }
 
+        // 修改为“结束”，只要满一分钟手动结束也增加番茄数
         function stopTimer(skipRecord = false) {
             clearInterval(timerInterval);
             if (!skipRecord) recordFocusSession(true); 
