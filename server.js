@@ -320,22 +320,25 @@ io.on('connection', (socket) => {
 });
 
 // ================= 启动服务器（自动处理端口占用） =================
-const DEFAULT_PORT = process.env.PORT || 3000;
-let currentPort = DEFAULT_PORT;
+let currentPort = 3000;
 
 function startServer(port) {
+    // 使用 .once 代替 .on，确保这个监听器只执行一次，执行完就销毁
+    server.once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.warn(`⚠️ 端口 ${port} 已被占用，尝试使用端口 ${port + 1}`);
+            startServer(port + 1); // 尝试下一个端口
+        } else {
+            console.error('服务器发生未知错误:', err);
+        }
+    });
+
     server.listen(port, () => {
         console.log(`🚀 云端自习室服务器已成功启动，正在监听端口 ${port}`);
-    }).on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-            console.log(`⚠️ 端口 ${port} 已被占用，尝试使用端口 ${port + 1}`);
-            startServer(port + 1);
-        } else {
-            console.error('服务器启动失败:', err);
-        }
     });
 }
 
+// 启动服务器
 startServer(currentPort);
 
 // ================= 全局异常捕获（防止进程意外退出） =================
