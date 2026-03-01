@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云端自习室 - 专注每一刻</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root { 
+            --primary-color: #667eea; 
+            --primary-light: #764ba2;
+            --primary-hover: #5a6fe0; 
+            --danger-color: #fc6076; 
+            --danger-hover: #ff9a44;
+            --warning-color: #f6d365;
+            --success-color: #1dd1a1;
+            --text-main: #2d3748; 
+            --text-secondary: #4a5568; 
+            --text-tertiary: #a0aec0;
+            --border-color: rgba(255, 255, 255, 0.4); 
+            --radius-sm: 8px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            
+            /* 毛玻璃核心变量 */
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        
+        body { 
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            color: var(--text-main); 
+            height: 100vh; 
+            overflow: hidden; 
+            line-height: 1.5;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: var(--glass-border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--glass-shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .app-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr 340px;
+            grid-template-rows: 1fr 280px;
+            gap: 20px;
+            padding: 70px 20px 20px 20px; 
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #taskCard { grid-column: 1; grid-row: 1; overflow-y: auto; }
+        #timerSettingsCard { grid-column: 1; grid-row: 2; height: max-content; }
+        #videoCard { grid-column: 2; grid-row: 1; position: relative; padding: 15px; background: rgba(0,0,0,0.4); border-color: rgba(255,255,255,0.1); }
+        #timerDisplayCard { grid-column: 2; grid-row: 2; display: flex; flex-direction: row; gap: 20px; padding: 25px; }
+        #chatCard { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; overflow: hidden; }
+
+        #taskCard, #timerSettingsCard { transform: translateY(-33px); transition: transform 0.2s ease; z-index: 5; }
+
+        .top-center-controls {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; z-index: 20;
+        }
+        
+        .top-center-controls button {
+            padding: 10px 20px; border-radius: var(--radius-lg); border: none; cursor: pointer;
+            background: var(--glass-bg); color: var(--text-main); font-weight: 600; font-size: 14px;
+            box-shadow: var(--glass-shadow); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: var(--glass-border); transition: 0.3s;
+        }
+        .top-center-controls button:hover { background: #fff; transform: translateY(-2px); }
+        .top-center-controls button.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .top-center-controls button.btn-danger.active { background: var(--danger-color); color: #fff; border-color: var(--danger-color); }
+
+        .top-bar { position: absolute; top: 20px; right: 20px; z-index: 20; display: flex; gap: 12px; }
+        .stat-badge { 
+            background: var(--glass-bg); backdrop-filter: blur(12px);
+            color: var(--text-main); padding: 8px 16px; border-radius: var(--radius-lg); 
+            font-size: 14px; border: var(--glass-border); display: flex; align-items: center; gap: 8px;
+            box-shadow: var(--glass-shadow); font-weight: 500; cursor: pointer;
+        }
+        .host-badge { background: var(--warning-color); color: #fff; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; margin-left: 6px; }
+
+        .video-grid { display: flex; gap: 15px; width: 100%; height: 100%; justify-content: center; align-items: stretch; }
+        
+        .video-box { 
+            background: #000; border-radius: var(--radius-sm); overflow: hidden; position: relative; 
+            cursor: pointer; border: 2px solid transparent; transition: all 0.3s ease; display: flex; flex-direction: column; box-shadow: var(--shadow-md);
+        }
+        .video-box:hover { border-color: var(--primary-light); transform: translateY(-2px); }
+        .video-box video { width: 100%; height: 100%; object-fit: contain; flex: 1; }
+        
+        /* 强制隐藏无画面的视频框 */
+        .video-box.no-video { display: none !important; }
+
+        .video-label { 
+            position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.6); 
+            color: white; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; 
+            display: flex; justify-content: space-between; align-items: flex-end; backdrop-filter: blur(4px);
+        }
+        .video-info-text { display: flex; flex-direction: column; gap: 4px; }
+        .vol-slider { width: 60px; accent-color: var(--primary-color); cursor: pointer; }
+
+        .video-box.large, .video-box.default-main { flex: 1; min-width: 0; height: 100%; }
+        .video-sidebar { width: 25%; max-width: 280px; min-width: 160px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px; }
+        .video-sidebar .video-box { width: 100%; height: auto; aspect-ratio: 16/9; flex-shrink: 0; }
+        .video-sidebar.empty { display: none; }
+
+        .panel-header h3 { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        input[type="text"], input[type="number"] { 
+            flex: 1; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.6); border-radius: var(--radius-sm);
+            background: rgba(255,255,255,0.7); outline: none; transition: 0.2s; color: var(--text-main);
+        }
+        input:focus { background: #fff; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2); }
+        
+        button.styled-btn { 
+            padding: 10px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; 
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%); 
+            color: white; font-weight: 500; transition: 0.2s; 
+        }
+        button.styled-btn:hover { box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); transform: translateY(-1px); }
+        button.styled-btn.secondary { background: rgba(255,255,255,0.5); color: var(--text-main); border: 1px solid rgba(255,255,255,0.8); }
+        button.styled-btn.danger { background: linear-gradient(135deg, var(--danger-color) 0%, var(--danger-hover) 100%); }
+
+        #listsContainer { flex: 1; overflow-y: auto; }
+        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.5); border-radius: var(--radius-sm); margin-bottom: 8px; transition: 0.2s; }
+        .task-item:hover { background: rgba(255,255,255,0.8); transform: translateX(2px); }
+        .task-item.completed span { text-decoration: line-through; color: var(--text-secondary); opacity: 0.6; }
+
+        .timer-main-area { flex: 0.9; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px dashed var(--border-color); padding-right: 20px; }
+        .timer-stats-area { flex: 1.1; display: flex; flex-direction: column; gap: 15px; overflow: hidden; padding-left: 10px; }
+        
+        .timer-display { font-size: 80px; font-weight: bold; color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1; margin: 15px 0; letter-spacing: 2px;}
+        .timer-status-bar { padding: 6px 16px; border-radius: var(--radius-lg); background: rgba(255,255,255,0.8); font-weight: 600; color: var(--text-secondary); border: 1px solid rgba(0,0,0,0.05); }
+        
+        .stats-overview { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-box { background: rgba(255,255,255,0.4); padding: 12px 15px; border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 5px; }
+        .stat-label { font-size: 13px; color: var(--text-secondary); }
+        .stat-val { font-size: 26px; font-weight: bold; color: var(--text-main); line-height: 1; }
+        
+        .focus-timeline-container { flex: 1; overflow-y: auto; padding-left: 8px; margin-top: 5px; }
+        .timeline-item { position: relative; padding-left: 20px; padding-bottom: 20px; border-left: 2px solid var(--primary-light); }
+        .timeline-item:last-child { border-left: 2px solid transparent; }
+        .timeline-item::before { content: ''; position: absolute; left: -6px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--primary-color); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--primary-light); }
+        .timeline-time { font-size: 13px; color: var(--text-tertiary); display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .timeline-task { font-size: 14px; font-weight: 600; color: var(--text-main); }
+
+        .timer-settings { display: flex; flex-direction: column; gap: 12px; }
+        .audio-upload { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(0,0,0,0.1); }
+        .audio-upload input[type="file"] { font-size: 12px; width: 100%; margin-top: 5px; }
+
+        .user-list { 
+            display: flex; flex-direction: column; gap: 8px; overflow-y: auto; 
+            max-height: 0; opacity: 0; margin-bottom: 0; padding-bottom: 0;
+            border-bottom: 0px dashed rgba(0,0,0,0.1); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .user-list.show { 
+            max-height: 40%; opacity: 1; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed rgba(0,0,0,0.1);
+        }
+        .user-list-item { 
+            background: rgba(255,255,255,0.5); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; 
+            flex-direction: column; gap: 4px; border: 1px solid rgba(255,255,255,0.6); transition: 0.2s; flex-shrink: 0; 
+        }
+        .user-list-item:hover { background: rgba(255,255,255,0.8); }
+        .user-list-name { font-size: 13px; font-weight: bold; color: var(--text-main); }
+        .user-list-status { font-size: 11px; color: var(--text-secondary); }
+
+        .chat-messages { flex: 1; overflow-y: auto; padding: 10px 5px; display: flex; flex-direction: column; gap: 12px; }
+        .message { font-size: 14px; padding: 12px; border-radius: 12px 12px 12px 0; background: rgba(255,255,255,0.8); align-self: flex-start; max-width: 85%; word-wrap: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.05); user-select: none; }
+        .message.self { align-self: flex-end; background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); color: white; border-radius: 12px 12px 0 12px; }
+        .message .msg-meta { font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px; }
+        .message.self .msg-meta { color: rgba(255,255,255,0.7); text-align: right; }
+        .message img { max-width: 100%; border-radius: 8px; margin-top: 8px; cursor: pointer; }
+        .nudge-msg { text-align: center; font-size: 12px; color: #888; margin: 4px 0; background: none; box-shadow: none; align-self: center; padding: 0; border-radius: 0; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+
+    <div class="top-center-controls">
+        <button id="btnMic" onclick="toggleMic()">🎤 开启麦克风</button>
+        <button id="btnCam" onclick="toggleCam()">📷 开启摄像头</button>
+        <button id="btnScreen" onclick="toggleScreenShare()" class="btn-danger">💻 共享屏幕</button>
+    </div>
+
+    <div class="top-bar">
+        <div class="stat-badge" onclick="editNickname()" title="点击修改昵称">
+            <span id="myNameDisplay">加载中...</span> ✏️
+        </div>
+        <div class="stat-badge" id="hostStatusBadge" style="display:none; background: #f6d365; border:none;">👑 主持人</div>
+        <div class="stat-badge" onclick="toggleUserList()" style="cursor: pointer; user-select: none;" title="点击展开/收起成员列表">
+            👥 在线: <span id="userCountDisplay">1</span>
+        </div>
+    </div>
+
+    <div class="app-layout">
+        
+        <div class="glass-card" id="taskCard">
+            <div class="panel-header"><h3>📋 任务清单</h3></div>
+            <div class="input-group">
+                <input type="text" id="newListInput" placeholder="输入清单名称...">
+                <button class="styled-btn" onclick="createList()">新建</button>
+            </div>
+            <div id="listsContainer"></div>
+        </div>
+
+        <div class="glass-card" id="timerSettingsCard">
+            <div class="panel-header" style="margin-bottom: 10px;"><h3>⚙️ 计时设置</h3></div>
+            <div class="timer-settings">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 14px; font-weight:500;">专注(分): <input type="number" id="focusTime" value="40" style="width:70px; padding:5px; text-align:center;"></span>
+                    <span style="font-size: 14px; font-weight:500;">休息(分): <input type="number" id="breakTime" value="5" style="width:70px; padding:5px; text-align:center;"></span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px;">
+                    <button class="styled-btn" onclick="startPomodoro()">开始番茄钟</button>
+                    <button class="styled-btn secondary" onclick="startStopwatch()">开始正计时</button>
+                    <button class="styled-btn" id="btnPause" onclick="togglePauseTimer()" style="display:none; background:#f6d365; color:#000;">暂停</button>
+                    <button class="styled-btn danger" onclick="stopTimer()">结束</button>
+                </div>
+                <div class="audio-upload">
+                    <label style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">🎵 自定义结束提示音 (MP3, <10MB)</label>
+                    <input type="file" id="alarmSound" accept=".mp3,audio/mpeg" onchange="handleAudioUpload(event)">
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card" id="videoCard">
+            <div class="video-grid" id="videoGrid">
+                <div class="video-box default-main no-video" id="localVideoBox" onclick="togglePin('localVideoBox')">
+                    <video id="localVideo" autoplay muted playsinline></video>
+                    <div class="video-label">
+                        <div class="video-info-text">
+                            <div style="font-weight:bold; font-size:14px; margin-bottom:2px;">我</div>
+                            <div style="font-size:12px; color:#e2e8f0;" id="localVideoStatus">未开启</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card" id="timerDisplayCard">
+            <div class="timer-main-area">
+                <div id="currentTaskDisplay" style="font-size:15px; font-weight:600; color:var(--text-secondary);">专注：暂无任务</div>
+                <div class="timer-display" id="timeDisplay">40:00</div>
+                <div class="timer-status-bar" id="timerStatus">准备就绪</div>
+            </div>
+            
+            <div class="timer-stats-area">
+                <div class="stats-overview">
+                    <div class="stat-box">
+                        <div class="stat-label">今日番茄</div>
+                        <div class="stat-val" id="statPomodoros">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">今日专注时长</div>
+                        <div class="stat-val" id="statFocusTime">0 m</div>
+                    </div>
+                </div>
+                
+                <div style="font-weight: 600; font-size: 15px; margin-top: 5px; color: var(--text-main);">专注记录</div>
+                <div class="focus-timeline-container" id="timelineContainer">
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card" id="chatCard">
+            <div class="panel-header">
+                <h3>💬 互动区</h3>
+                <button id="hostChatToggleBtn" class="styled-btn danger" style="display:none; padding: 4px 8px; font-size: 12px;" onclick="toggleRoomChat()">禁言全员</button>
+            </div>
+            <div class="user-list" id="userListContainer"></div>
+            <div class="chat-messages" id="chatBox"></div>
+            
+            <div class="input-group" style="margin-bottom: 0; margin-top: 10px;">
+                <input type="file" id="imageInput" accept="image/png, image/jpeg, image/gif" style="display: none;" onchange="handleImageUpload(event)">
+                <button class="styled-btn secondary" onclick="document.getElementById('imageInput').click()" title="发送图片">🖼️</button>
+                <input type="text" id="reflectionInput" placeholder="发送消息...">
+                <button class="styled-btn" id="btnSendChat" onclick="sendReflection()">发送</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const ROOM_ID = 'default_study_room';
+        let socket;
+        let myUserId;
+        let isHost = false;
+        let roomUsers = [];
+        let roomDataFromServer = { names: {}, timers: {} };
+        let myNickname = localStorage.getItem('study_nickname') || '同学';
+        let currentMainId = 'localVideoBox';
+        let isLargeMode = false;
+        let currentFocusTask = ''; 
+
+        // 记录统计数据
+        let totalPomodoros = 0;
+        let totalFocusMinutes = 0;
+        let recordStartTime = null;
+        let recordTaskName = '';
+        let isCurrentPomodoro = false;
+
+        // 在线成员列表显示控制
+        let isUserListVisible = false;
+
+        function toggleUserList() {
+            isUserListVisible = !isUserListVisible;
+            const container = document.getElementById('userListContainer');
+            if (isUserListVisible) {
+                container.classList.add('show');
+            } else {
+                container.classList.remove('show');
+            }
+        }
+
+        // WebRTC 状态核心变量重构
+        let peerConnections = {}; 
+        let localStream = null;      
+        let cameraTrack = null; 
+        let micAudioTrack = null;
+        let screenVideoTrack = null; 
+        let screenAudioTrack = null; 
+        let isCamOpen = false;
+        let isMicOpen = false;
+        let isSharingScreen = false; 
+
+        // 拍一拍防刷冷却
+        let nudgeCooldowns = {};
+
+        // 自定义音频逻辑
+        let alarmAudio = new Audio();
+        
+        function handleAudioUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 10 * 1024 * 1024) { 
+                alert('文件过大！请选择 10MB 以内的 MP3 文件。');
+                event.target.value = ''; return;
+            }
+            if (file.type !== 'audio/mpeg' && !file.name.toLowerCase().endsWith('.mp3')) {
+                alert('格式错误！只能上传 MP3 格式文件。');
+                event.target.value = ''; return;
+            }
+            const url = URL.createObjectURL(file);
+            alarmAudio.src = url;
+            alert('自定义音效设置成功！');
+        }
+
+        function playAlarmSound() {
+            if (alarmAudio.src) {
+                alarmAudio.play().catch(e => console.log("播放失败", e));
+            } else {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    gain.gain.setValueAtTime(0, ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+                    osc.start(); osc.stop(ctx.currentTime + 1.5);
+                } catch(e) {}
+            }
+        }
+
+        document.body.addEventListener('click', () => {
+            document.querySelectorAll('audio, video').forEach(media => {
+                if (media.paused && media.srcObject) media.play().catch(e => {});
+            });
+        }, { once: true });
+
+        window.onload = () => { 
+            initSocket(); 
+            createList('今日目标'); 
+            arrangeLayout(currentMainId, isLargeMode); 
+        };
+
+        function initSocket() {
+            socket = io();
+            socket.on('connect', () => {
+                myUserId = socket.id;
+                document.getElementById('myNameDisplay').innerText = myNickname;
+                socket.emit('join_room', ROOM_ID);
+                socket.emit('update_name', myNickname); 
+            });
+
+            socket.on('room_update', (data) => {
+                roomDataFromServer = data; 
+                roomUsers = data.users;
+                document.getElementById('userCountDisplay').innerText = roomUsers.length;
+                isHost = (data.host === myUserId);
+                document.getElementById('hostStatusBadge').style.display = isHost ? 'flex' : 'none';
+                document.getElementById('hostChatToggleBtn').style.display = isHost ? 'block' : 'none';
+                
+                renderUserList(data.host);
+                updateAllVideoLabels();
+                broadcastMediaStatus(); // 确保新成员能随时收到当前我的媒体状态
+
+                const chatInput = document.getElementById('reflectionInput');
+                const chatBtn = document.getElementById('btnSendChat');
+                if (!data.chatEnabled && !isHost) {
+                    chatInput.disabled = true; chatBtn.disabled = true;
+                    chatInput.placeholder = "主持人已开启全员禁言";
+                } else {
+                    chatInput.disabled = false; chatBtn.disabled = false;
+                    chatInput.placeholder = "发送消息...";
+                }
+            });
+
+            socket.on('chat_message', (msgData) => {
+                // [核心修改] 监听远端的媒体状态系统指令，实时控制画面的折叠与显示
+                if (msgData.isSystem && msgData.action === 'media_status') {
+                    handleMediaStatusUpdate(msgData.userId, msgData.hasVideo);
+                    return;
+                }
+                if (msgData.isNudge) {
+                    appendNudgeMessage(msgData.message);
+                } else {
+                    appendMessage(msgData.userName, msgData.message, msgData.time, false, msgData.isImage);
+                }
+            });
+
+            socket.on('user_joined', async (newUserId) => {
+                createPeerConnection(newUserId);
+                // 向新连接的成员严格同步本地最新轨道池
+                if (localStream) {
+                    localStream.getTracks().forEach(track => {
+                        if (peerConnections[newUserId]) peerConnections[newUserId].addTrack(track, localStream);
+                    });
+                }
+                broadcastMediaStatus();
+            });
+
+            socket.on('offer', async (data) => {
+                const pc = createPeerConnection(data.caller);
+                await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+                if (localStream) {
+                    localStream.getTracks().forEach(track => {
+                        const senders = pc.getSenders();
+                        if (!senders.some(s => s.track === track)) {
+                            pc.addTrack(track, localStream);
+                        }
+                    });
+                }
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                socket.emit('answer', { target: data.caller, serval: myUserId, sdp: answer });
+                broadcastMediaStatus();
+            });
+
+            socket.on('answer', async (data) => {
+                const pc = peerConnections[data.serval];
+                if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            });
+
+            socket.on('ice-candidate', async (data) => {
+                const pc = peerConnections[data.from];
+                if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+            });
+
+            socket.on('user_left', (userId) => { closePeerConnection(userId); });
+        }
+
+        function editNickname() {
+            const newName = prompt("请输入新昵称 (2-10个字符)：", myNickname);
+            if (newName && newName.trim().length >= 2 && newName.trim().length <= 10) {
+                myNickname = newName.trim();
+                localStorage.setItem('study_nickname', myNickname);
+                document.getElementById('myNameDisplay').innerText = myNickname;
+                socket.emit('update_name', myNickname);
+            }
+        }
+
+        // 渲染侧边栏在线列表
+        function renderUserList(hostId) {
+            const container = document.getElementById('userListContainer');
+            container.innerHTML = '';
+            
+            const sortedUsers = [...roomUsers].sort((a, b) => {
+                if (a === myUserId) return -1;
+                if (b === myUserId) return 1;
+                return 0;
+            });
+
+            sortedUsers.forEach(id => {
+                const item = document.createElement('div');
+                item.className = 'user-list-item';
+                if (id === myUserId) item.style.borderLeft = '4px solid var(--primary-color)';
+                
+                item.innerHTML = `
+                    <div class="user-list-name" id="list_name_${id}">加载中...</div>
+                    <div class="user-list-status" id="list_status_${id}">加载中...</div>
+                `;
+                container.appendChild(item);
+            });
+            updateAllVideoLabels();
+        }
+
+        function updateAllVideoLabels() {
+            roomUsers.forEach(id => {
+                const isMe = (id === myUserId);
+                const customName = isMe ? myNickname : (roomDataFromServer.names[id] || `成员(${id.substring(0,4)})`);
+                
+                const isPomodoro = document.getElementById('timerStatus').innerText.includes('🔥');
+                const timerStatus = isMe ? getTimerStatusString(isPomodoro) : (roomDataFromServer.timers[id] || '暂无专注任务');
+                
+                const labelContainer = isMe ? document.querySelector('#localVideoBox .video-info-text') : document.querySelector(`#box_${id} .video-info-text`);
+                if (labelContainer) {
+                    labelContainer.innerHTML = `<div style="font-weight:bold; font-size:14px; margin-bottom:2px;">${customName}</div><div style="font-size:12px; color:#e2e8f0;">${timerStatus}</div>`;
+                }
+
+                const listItemName = document.getElementById(`list_name_${id}`);
+                const listItemStatus = document.getElementById(`list_status_${id}`);
+                if (listItemName && listItemStatus) {
+                    const displayName = isMe ? `${customName} (我)` : customName;
+                    const hostIcon = id === roomDataFromServer.host ? ' 👑' : '';
+                    listItemName.innerHTML = `${displayName}${hostIcon}`;
+                    listItemStatus.innerHTML = timerStatus;
+                }
+            });
+        }
+
+        // [优化提升] 加入 iceCandidatePoolSize 提升同步连通速度
+        const rtcConfig = { 
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ],
+            iceCandidatePoolSize: 10
+        };
+
+        function adjustRemoteVolume(remoteUserId, value) {
+            document.querySelectorAll(`.user-audio-${remoteUserId}`).forEach(el => el.volume = parseFloat(value));
+        }
+
+        function createPeerConnection(remoteUserId) {
+            if (peerConnections[remoteUserId]) return peerConnections[remoteUserId];
+            const pc = new RTCPeerConnection(rtcConfig);
+            peerConnections[remoteUserId] = pc;
+            
+            let isNegotiating = false;
+            pc.onsignalingstatechange = () => { isNegotiating = (pc.signalingState !== "stable"); };
+            pc.onicecandidate = (event) => { if (event.candidate) socket.emit('ice-candidate', { target: remoteUserId, from: myUserId, candidate: event.candidate }); };
+            pc.onnegotiationneeded = async () => {
+                if (isNegotiating) return;
+                isNegotiating = true;
+                try {
+                    const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+                    socket.emit('offer', { target: remoteUserId, caller: myUserId, sdp: pc.localDescription });
+                } catch (e) {} finally { isNegotiating = false; }
+            };
+
+            pc.ontrack = (event) => {
+                if (event.track.kind === 'audio') {
+                    const audioId = `audio_${event.track.id}`;
+                    let audioEl = document.getElementById(audioId);
+                    if (!audioEl) {
+                        audioEl = document.createElement('audio');
+                        audioEl.id = audioId; 
+                        audioEl.autoplay = true; 
+                        audioEl.className = `user-audio-${remoteUserId}`; 
+                        audioEl.srcObject = new MediaStream([event.track]);
+                        document.body.appendChild(audioEl);
+                        event.track.onended = () => { if (audioEl) audioEl.remove(); };
+                    }
+                }
+                
+                if (event.track.kind === 'video') {
+                    let remoteVideoE = document.getElementById(`video_${remoteUserId}`);
+                    if (!remoteVideoE) {
+                        const html = `<div class="video-box no-video" id="box_${remoteUserId}" onclick="togglePin('box_${remoteUserId}')">
+                            <video id="video_${remoteUserId}" autoplay playsinline muted></video>
+                            <div class="video-label">
+                                <div class="video-info-text">
+                                    <div style="font-weight:bold; font-size:14px; margin-bottom:2px;">加载中...</div>
+                                    <div style="font-size:12px; color:#e2e8f0;"></div>
+                                </div>
+                                <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" onclick="event.stopPropagation();" oninput="adjustRemoteVolume('${remoteUserId}', this.value)" title="调节音量">
+                            </div>
+                        </div>`;
+                        document.getElementById('videoGrid').insertAdjacentHTML('beforeend', html);
+                        remoteVideoE = document.getElementById(`video_${remoteUserId}`);
+                    }
+                    if (remoteVideoE.srcObject !== event.streams[0]) {
+                        remoteVideoE.srcObject = event.streams[0];
+                    }
+                    updateAllVideoLabels();
+                    setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
+                }
+            };
+            return pc;
+        }
+
+        function closePeerConnection(userId) {
+            if (peerConnections[userId]) { peerConnections[userId].close(); delete peerConnections[userId]; }
+            const box = document.getElementById(`box_${userId}`); if (box) box.remove();
+            document.querySelectorAll(`.user-audio-${userId}`).forEach(el => el.remove());
+            
+            if (currentMainId === `box_${userId}`) {
+                currentMainId = 'localVideoBox';
+                isLargeMode = false;
+            }
+            setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
+        }
+
+        // [核心修改] 强制将最新画面推送到轨道池，绝不允许黑屏！
+        function syncTracksToPeers() {
+            if (!localStream) localStream = new MediaStream();
+            
+            // 完全清理并重建轨道
+            localStream.getTracks().forEach(t => localStream.removeTrack(t));
+            if (isCamOpen && cameraTrack) localStream.addTrack(cameraTrack);
+            if (isSharingScreen && screenVideoTrack) localStream.addTrack(screenVideoTrack);
+            if (isMicOpen && micAudioTrack) localStream.addTrack(micAudioTrack);
+            if (isSharingScreen && screenAudioTrack) localStream.addTrack(screenAudioTrack);
+
+            Object.values(peerConnections).forEach(pc => {
+                const senders = pc.getSenders();
+                // 剔除失效轨道
+                senders.forEach(sender => {
+                    if (sender.track && !localStream.getTracks().includes(sender.track)) {
+                        pc.removeTrack(sender);
+                    }
+                });
+                // 增加新加入的活跃轨道
+                localStream.getTracks().forEach(track => {
+                    if (!senders.some(s => s.track === track)) {
+                        pc.addTrack(track, localStream);
+                    }
+                });
+            });
+            broadcastMediaStatus();
+        }
+
+        // 广播UI状态：当成员画面关闭时，强制将他的方块消除
+        function broadcastMediaStatus() {
+            const hasV = isCamOpen || isSharingScreen;
+            if(socket) {
+                socket.emit('chat_message', { isSystem: true, action: 'media_status', userId: myUserId, hasVideo: hasV });
+            }
+            handleMediaStatusUpdate(myUserId, hasV);
+        }
+
+        function handleMediaStatusUpdate(userId, hasVideo) {
+            const boxId = userId === myUserId ? 'localVideoBox' : `box_${userId}`;
+            const box = document.getElementById(boxId);
+            if (box) {
+                if (hasVideo) {
+                    box.classList.remove('no-video');
+                } else {
+                    box.classList.add('no-video');
+                    if (currentMainId === boxId) {
+                        currentMainId = 'localVideoBox';
+                        isLargeMode = false;
+                    }
+                }
+                arrangeLayout(currentMainId, isLargeMode);
+            }
+        }
+
+        function updateLocalVideoSrc() {
+            const localVideo = document.getElementById('localVideo');
+            if (isSharingScreen && screenVideoTrack) {
+                localVideo.srcObject = new MediaStream([screenVideoTrack]);
+            } else if (isCamOpen && cameraTrack) {
+                localVideo.srcObject = new MediaStream([cameraTrack]);
+            } else {
+                localVideo.srcObject = null;
+            }
+        }
+
+        async function toggleCam() {
+            const btn = document.getElementById('btnCam');
+            if (!isCamOpen) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true }); 
+                    cameraTrack = stream.getVideoTracks()[0];
+                    cameraTrack.onended = () => { if(isCamOpen) toggleCam(); };
+                    isCamOpen = true; 
+                    btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
+                } catch (err) { return alert("无法访问摄像头: " + err.message); }
+            } else {
+                if (cameraTrack) { cameraTrack.stop(); cameraTrack = null; }
+                isCamOpen = false; 
+                btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
+            }
+            updateLocalVideoSrc();
+            syncTracksToPeers();
+        }
+
+        async function toggleMic() {
+            const btn = document.getElementById('btnMic');
+            if (!isMicOpen) {
+                try { 
+                    if (!micAudioTrack) {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+                        micAudioTrack = stream.getAudioTracks()[0]; 
+                        micAudioTrack.onended = () => { if(isMicOpen) toggleMic(); };
+                    }
+                    micAudioTrack.enabled = true;
+                    isMicOpen = true; 
+                    btn.innerText = "🎤 关闭麦克风"; btn.classList.add('active'); 
+                } catch(e) { return alert("无法获取麦克风权限！"); }
+            } else { 
+                if (micAudioTrack) { micAudioTrack.enabled = false; micAudioTrack.stop(); micAudioTrack = null; }
+                isMicOpen = false; 
+                btn.innerText = "🎤 开启麦克风"; btn.classList.remove('active'); 
+            }
+            syncTracksToPeers();
+        }
+
+        async function toggleScreenShare() {
+            const btn = document.getElementById('btnScreen');
+            if (!isSharingScreen) {
+                if (isCamOpen) await toggleCam(); // 屏幕共享和摄像头互斥
+                try {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                    screenVideoTrack = stream.getVideoTracks()[0]; 
+                    screenAudioTrack = stream.getAudioTracks()[0]; 
+                    screenVideoTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
+                    isSharingScreen = true; 
+                    btn.innerText = "💻 停止共享"; btn.classList.add('active');
+                } catch (err) { return; } 
+            } else {
+                if (screenVideoTrack) { screenVideoTrack.stop(); screenVideoTrack = null; }
+                if (screenAudioTrack) { screenAudioTrack.stop(); screenAudioTrack = null; }
+                isSharingScreen = false; 
+                btn.innerText = "💻 共享屏幕"; btn.classList.remove('active'); 
+            }
+            updateLocalVideoSrc();
+            syncTracksToPeers();
+        }
+
+        function togglePin(boxId) {
+            if (currentMainId === boxId && isLargeMode) { isLargeMode = false; currentMainId = 'localVideoBox'; } 
+            else { currentMainId = boxId; isLargeMode = true; }
+            arrangeLayout(currentMainId, isLargeMode);
+        }
+
+        // [核心修改] 动态感知活跃的画面布局，没有画面的彻底从布局中剔除
+        function arrangeLayout(mainId, large) {
+            const grid = document.getElementById('videoGrid');
+            const allBoxes = Array.from(document.querySelectorAll('.video-box'));
+            
+            // 筛选出确实开启了视频（不带 no-video 类）的方块
+            const activeBoxes = allBoxes.filter(b => !b.classList.contains('no-video'));
+
+            // 将所有方块先暂离 DOM 以重塑结构
+            allBoxes.forEach(b => { if (b.parentNode) b.parentNode.removeChild(b); });
+            grid.innerHTML = '';
+
+            // 如果全员都没有开启画面，显示占位文字
+            if (activeBoxes.length === 0) {
+                grid.innerHTML = '<div style="color:var(--text-tertiary); margin:auto; font-size:16px; font-weight: 500;">等待成员开启画面...</div>';
+                // 依然需要将隐藏的盒子挂载上去，以保证逻辑运转
+                allBoxes.filter(b => b.classList.contains('no-video')).forEach(b => { b.style.display = 'none'; grid.appendChild(b); });
+                return;
+            }
+
+            // 确立目前居中的主画面（如果是唯一的一个人，则他自然就是主画面）
+            let mainBox = activeBoxes.find(b => b.id === mainId) || activeBoxes.find(b => b.id === 'localVideoBox') || activeBoxes[0];
+            
+            activeBoxes.forEach(b => { b.style.display = 'flex'; b.classList.remove('large', 'default-main'); });
+            
+            large ? mainBox.classList.add('large') : mainBox.classList.add('default-main');
+            grid.appendChild(mainBox);
+
+            const others = activeBoxes.filter(b => b.id !== mainBox.id);
+            if (others.length > 0) {
+                const sidebar = document.createElement('div'); sidebar.className = 'video-sidebar';
+                others.forEach(b => sidebar.appendChild(b)); grid.appendChild(sidebar);
+            }
+
+            // 将隐藏的盒子重新挂载（以备未来有画面时复活）
+            allBoxes.filter(b => b.classList.contains('no-video')).forEach(b => {
+                 b.style.display = 'none';
+                 grid.appendChild(b);
+            });
+        }
+
+        // ================= 状态、统计与记录生成 =================
+        let timerInterval; let totalSeconds = 0; let isTimerRunning = false; let isTimerPaused = false; 
+
+        function getTimerStatusString(isPomodoro) {
+            if (!isTimerRunning && !isTimerPaused) {
+                return currentFocusTask ? `待专注：${currentFocusTask}` : '暂无专注任务';
+            }
+            const m = Math.floor(totalSeconds / 60);
+            const s = (totalSeconds % 60).toString().padStart(2, '0');
+            const timeStr = isPomodoro ? `还剩 ${m}:${s}` : `已计时 ${m}:${s}`;
+            const taskName = currentFocusTask || (isPomodoro ? "番茄钟" : "正计时");
+            return `正在${taskName} | ${timeStr}${isTimerPaused ? " (暂停)" : ""}`;
+        }
+
+        function broadcastTimerStatus(isPomodoro) {
+            if (!socket) return;
+            socket.emit('sync_timer', getTimerStatusString(isPomodoro));
+        }
+
+        function updateDisplay(sec) {
+            document.getElementById('timeDisplay').innerText = `${Math.floor(sec / 60).toString().padStart(2, '0')}:${(sec % 60).toString().padStart(2, '0')}`;
+            const isPomodoro = document.getElementById('timerStatus').innerText.includes('🔥');
+            
+            const localLabelSpan = document.getElementById('localVideoStatus');
+            if(localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isPomodoro);
+
+            if (sec % 5 === 0) broadcastTimerStatus(isPomodoro);
+        }
+
+        function updateStatsUI() {
+            document.getElementById('statPomodoros').innerText = totalPomodoros;
+            let h = Math.floor(totalFocusMinutes / 60);
+            let m = totalFocusMinutes % 60;
+            document.getElementById('statFocusTime').innerText = h > 0 ? `${h}h ${m}m` : `${m}m`;
+        }
+
+        function appendFocusRecord(startTime, endTime, taskName, durationMins) {
+            const startStr = startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const endStr = endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const html = `
+                <div class="timeline-item">
+                    <div class="timeline-time">
+                        <span>${startStr} - ${endStr}</span>
+                        <span style="font-weight:600; color:var(--primary-color);">${durationMins}m</span>
+                    </div>
+                    <div class="timeline-task">${taskName}</div>
+                </div>`;
+            document.getElementById('timelineContainer').insertAdjacentHTML('afterbegin', html);
+        }
+
+        function recordFocusSession(isFinished) {
+            if (!recordStartTime) return;
+            const endTime = new Date();
+            const diffSecs = Math.floor((endTime - recordStartTime) / 1000);
+            if (diffSecs >= 60) { 
+                const mins = Math.floor(diffSecs / 60);
+                totalFocusMinutes += mins;
+                if (isCurrentPomodoro && isFinished) totalPomodoros++;
+                appendFocusRecord(recordStartTime, endTime, recordTaskName, mins);
+                updateStatsUI();
+            }
+            recordStartTime = null;
+        }
+
+        function setFocusTask(taskName) {
+            currentFocusTask = taskName;
+            const statusEl = document.getElementById('timerStatus');
+            const taskDisplayEl = document.getElementById('currentTaskDisplay');
+            taskDisplayEl.innerText = taskName ? `🎯 专注：${taskName}` : '专注：暂无任务';
+            
+            const isPomodoro = statusEl.innerText.includes('🔥') || statusEl.innerText.includes('暂停');
+            if (isTimerRunning || isTimerPaused) {
+                broadcastTimerStatus(isPomodoro);
+            } else {
+                statusEl.innerText = `准备就绪`;
+                broadcastTimerStatus(false); 
+            }
+
+            const localLabelSpan = document.getElementById('localVideoStatus');
+            if(localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isPomodoro);
+        }
+
+        function startStopwatch() {
+            clearInterval(timerInterval);
+            totalSeconds = 0; isTimerRunning = true; isTimerPaused = false;
+            
+            recordStartTime = new Date();
+            recordTaskName = currentFocusTask || "正计时";
+            isCurrentPomodoro = false;
+
+            document.getElementById('timerStatus').innerText = "⏳ 正计时中...";
+            document.getElementById('btnPause').style.display = 'inline-block'; document.getElementById('btnPause').innerText = '暂停';
+            broadcastTimerStatus(false);
+            timerInterval = setInterval(() => { if (!isTimerPaused) { totalSeconds++; updateDisplay(totalSeconds); } }, 1000);
+        }
+
+        function startPomodoro() {
+            clearInterval(timerInterval);
+            const mins = parseInt(document.getElementById('focusTime').value) || 25;
+            totalSeconds = mins * 60; isTimerRunning = true; isTimerPaused = false;
+            
+            recordStartTime = new Date();
+            recordTaskName = currentFocusTask || "番茄钟";
+            isCurrentPomodoro = true;
+
+            document.getElementById('timerStatus').innerText = "🔥 专注中...";
+            document.getElementById('btnPause').style.display = 'inline-block'; document.getElementById('btnPause').innerText = '暂停';
+            updateDisplay(totalSeconds);
+            broadcastTimerStatus(true);
+            
+            timerInterval = setInterval(() => {
+                if (!isTimerPaused) {
+                    if (totalSeconds > 0) {
+                        totalSeconds--; updateDisplay(totalSeconds);
+                    } else {
+                        clearInterval(timerInterval); 
+                        recordFocusSession(true); 
+                        playAlarmSound();
+                        alert("专注结束！开始休息吧。");
+                        stopTimer(true); 
+                    }
+                }
+            }, 1000);
+        }
+
+        function togglePauseTimer() {
+            if (!isTimerRunning) return;
+            isTimerPaused = !isTimerPaused;
+            const btn = document.getElementById('btnPause');
+            const status = document.getElementById('timerStatus');
+            const isPomodoro = status.innerText.includes('🔥') || status.innerText.includes('暂停');
+            
+            if (isTimerPaused) {
+                btn.innerText = "继续"; status.innerText = "⏸️ 计时已暂停";
+            } else {
+                btn.innerText = "暂停"; status.innerText = isPomodoro ? "🔥 专注中..." : "⏳ 正计时中...";
+            }
+            
+            const localLabelSpan = document.getElementById('localVideoStatus');
+            if(localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isPomodoro);
+            broadcastTimerStatus(isPomodoro); 
+        }
+
+        function stopTimer(skipRecord = false) {
+            clearInterval(timerInterval);
+            if (!skipRecord) recordFocusSession(true); 
+            
+            isTimerRunning = false; isTimerPaused = false;
+            document.getElementById('timerStatus').innerText = "准备就绪";
+            document.getElementById('btnPause').style.display = 'none';
+            
+            const localLabelSpan = document.getElementById('localVideoStatus');
+            if(localLabelSpan) localLabelSpan.innerText = getTimerStatusString(false);
+            broadcastTimerStatus(false);
+        }
+
+        // ================= 聊天室与清单任务 =================
+        function createList(presetName) {
+            let name = typeof presetName === 'string' ? presetName : '';
+            if (!name) {
+                const inputEl = document.getElementById('newListInput');
+                if (inputEl) { name = inputEl.value.trim(); inputEl.value = ''; }
+            }
+            if (!name) name = '新清单';
+
+            const listId = `list_${Date.now()}`;
+            const html = `<div style="margin-bottom:15px; border-bottom:1px dashed rgba(255,255,255,0.3); padding-bottom:10px;">
+                <div style="font-weight:600; margin-bottom:10px; font-size:15px; color:var(--text-main);">📂 ${name}</div>
+                <div style="display:flex; gap:8px;"><input type="text" id="taskInput_${listId}" placeholder="输入任务内容..."><button class="styled-btn" style="padding: 6px 12px;" onclick="addTask('${listId}')">+</button></div>
+                <div id="tasks_${listId}" style="margin-top:12px;"></div></div>`;
+            document.getElementById('listsContainer').insertAdjacentHTML('beforeend', html);
+        }
+        
+        function addTask(listId) {
+            const val = document.getElementById(`taskInput_${listId}`).value;
+            if(!val) return;
+            const taskId = `task_${Date.now()}`;
+            const html = `
+                <div class="task-item" id="${taskId}">
+                    <label style="flex:1; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                        <input type="checkbox" onclick="document.getElementById('${taskId}').classList.toggle('completed')"> 
+                        <span style="font-weight:500;">${val}</span>
+                    </label>
+                    <button class="styled-btn" style="padding: 4px 10px; font-size: 12px; border-radius: 4px;" onclick="setFocusTask('${val}')">干它！</button>
+                </div>`;
+            document.getElementById(`tasks_${listId}`).insertAdjacentHTML('beforeend', html);
+            document.getElementById(`taskInput_${listId}`).value = '';
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64Data = e.target.result;
+                const timeStr = new Date().toLocaleTimeString();
+                appendMessage(myNickname, base64Data, timeStr, true, true);
+                if(socket) socket.emit('chat_message', { userName: isHost ? `👑主持人(${myNickname})` : myNickname, message: base64Data, time: timeStr, isImage: true });
+            };
+            reader.readAsDataURL(file);
+            event.target.value = ''; 
+        }
+
+        function sendReflection() {
+            const input = document.getElementById('reflectionInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            const timeStr = new Date().toLocaleTimeString();
+            appendMessage(myNickname, msg, timeStr, true, false);
+            if(socket) socket.emit('chat_message', { userName: isHost ? `👑主持人(${myNickname})` : myNickname, message: msg, time: timeStr, isImage: false });
+            input.value = '';
+        }
+
+        function handleNudge(targetUser) {
+            const now = Date.now();
+            if (nudgeCooldowns[targetUser] && now - nudgeCooldowns[targetUser] < 3000) return;
+            nudgeCooldowns[targetUser] = now;
+            
+            const nudgeMsg = `${myNickname} 拍了拍 ${targetUser}`;
+            appendNudgeMessage(nudgeMsg); 
+            
+            if(socket) {
+                socket.emit('chat_message', { userName: myNickname, message: nudgeMsg, time: new Date().toLocaleTimeString(), isNudge: true });
+            }
+        }
+
+        function appendNudgeMessage(msgText) {
+            const box = document.getElementById('chatBox');
+            box.insertAdjacentHTML('beforeend', `<div class="message nudge-msg">${msgText}</div>`);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function appendMessage(user, msg, time, isSelf, isImage = false) {
+            const box = document.getElementById('chatBox');
+            const contentHtml = isImage ? `<img src="${msg}" onclick="window.open(this.src)">` : `<div>${msg}</div>`;
+            const safeUser = user.replace(/'/g, "\\'"); 
+            box.insertAdjacentHTML('beforeend', `<div class="message ${isSelf ? 'self' : ''}" ondblclick="handleNudge('${safeUser}')" title="双击拍一拍"><div class="msg-meta">${user} ${time}</div>${contentHtml}</div>`);
+            box.scrollTop = box.scrollHeight;
+        }
+        
+        const _refInput = document.getElementById('reflectionInput');
+        if (_refInput) _refInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendReflection(); });
+    </script>
+</body>
+</html>
