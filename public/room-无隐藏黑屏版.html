@@ -554,7 +554,6 @@
       let isMicOpen = false;
       let isSharingScreen = false; 
 
-      //-----------------------------视频同步传输-------------------------------
       const rtcConfig = { 
           iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
@@ -576,8 +575,6 @@
           ], 
           iceCandidatePoolSize: 10 
       };
-
-      //----------------------------------------------------------------
 
       function adjustRemoteVolume(remoteUserId, value) {
           const audioEl = document.getElementById(`audio_${remoteUserId}`);
@@ -630,11 +627,6 @@
                       remoteVideoE = document.getElementById(`video_${remoteUserId}`);
                   }
                   if (remoteVideoE.srcObject !== event.streams[0]) remoteVideoE.srcObject = event.streams[0];
-                  //新增
-                  event.track.onunmute = () => setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
-                  event.track.onmute = () => setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
-                  event.track.onended = () => setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
-                  
                   updateAllVideoLabels();
                   setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
               }
@@ -685,13 +677,11 @@
                   document.getElementById('localVideo').srcObject = new MediaStream([cameraTrack]); 
                   updateTrackStatus(cameraTrack, 'video'); 
                   isCamOpen = true; btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
-                  arrangeLayout(currentMainId, isLargeMode); // 新增：刷新网格
               } catch (err) { alert("无法访问摄像头!"); }
           } else {
               try { if (cameraTrack) { cameraTrack.stop(); updateTrackStatus(null, 'video'); } } catch(e) {}
               isCamOpen = false; btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
               document.getElementById('localVideo').srcObject = null;
-              arrangeLayout(currentMainId, isLargeMode); // 新增：刷新网格
           }
       }
 
@@ -726,7 +716,6 @@
                   if (screenAudioTrack) updateTrackStatus(screenAudioTrack, 'audio', true); 
                   isSharingScreen = true; btn.innerText = "💻 停止共享"; btn.classList.add('active');
                   screenTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
-                  arrangeLayout(currentMainId, isLargeMode); // 新增：刷新网格
               } catch (err) {}
           } else {
               try {
@@ -737,7 +726,6 @@
               } catch(e) {}
               isSharingScreen = false; btn.innerText = "💻 共享屏幕"; btn.classList.remove('active'); 
               document.getElementById('localVideo').srcObject = null;
-              arrangeLayout(currentMainId, isLargeMode); // 新增：刷新网格
           }
       }
 
@@ -747,71 +735,24 @@
           arrangeLayout(currentMainId, isLargeMode);
       }
 
-      // [核心精华] 重写排布逻辑：动态过滤无视频成员，恢复正常大小
-function arrangeLayout(mainId, large) {
-    const grid = document.getElementById('videoGrid');
-    const allBoxes = Array.from(document.querySelectorAll('.video-box'));
-    
-    // 1. 判断并过滤出真正有视频流的盒子
-    const visibleBoxes = allBoxes.filter(box => {
-        const video = box.querySelector('video');
-        let isActive = false;
-        
-        if (box.id === 'localVideoBox') {
-            // 本地盒子根据摄像头或屏幕共享的状态判断
-            isActive = isCamOpen || isSharingScreen;
-        } else if (video && video.srcObject) {
-            // 远程盒子根据视频轨道状态判断 (存在轨道、活跃、且未处于 muted 无数据状态)
-            const tracks = video.srcObject.getVideoTracks();
-            isActive = tracks.length > 0 && tracks.some(t => t.readyState === 'live' && t.enabled && !t.muted);
-        }
-        return isActive;
-    });
+      // 旧版的网格排布逻辑，不会粗暴地把人的盒子删掉，这是不卡死的关键保障
+      function arrangeLayout(mainId, large) {
+          const grid = document.getElementById('videoGrid');
+          const existingBoxes = Array.from(document.querySelectorAll('.video-box'));
+          let mainBox = existingBoxes.find(b => b.id === mainId) || existingBoxes.find(b => b.id === 'localVideoBox') || existingBoxes[0];
+          if (!mainBox) return;
 
-    const hiddenBoxes = allBoxes.filter(box => !visibleBoxes.includes(box));
+          grid.innerHTML = '';
+          existingBoxes.forEach(b => { b.style.display = 'flex'; b.classList.remove('large', 'default-main'); });
+          large ? mainBox.classList.add('large') : mainBox.classList.add('default-main');
+          grid.appendChild(mainBox);
 
-    // 清空网格 (注意：不能用 innerHTML +=，否则会破坏现有视频的 DOM 绑定)
-    grid.innerHTML = '';
-
-    // 2. 将隐藏的盒子强行保留在 DOM 中，保证 WebRTC 底层绑定不断开
-    hiddenBoxes.forEach(b => { 
-        b.style.display = 'none'; 
-        b.classList.remove('large', 'default-main');
-        grid.appendChild(b); 
-    });
-
-    // 3. 如果当前没有任何活跃视频，显示占位提示
-    if (visibleBoxes.length === 0) {
-        const placeholder = document.createElement('div');
-        placeholder.id = 'noVideoPlaceholder';
-        placeholder.style.cssText = 'color: var(--text-tertiary); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 15px; font-weight: 500; text-align: center;';
-        placeholder.innerText = '当前无成员开启摄像头或共享屏幕';
-        grid.appendChild(placeholder);
-        return;
-    }
-
-    // 4. 确定主视图：如果当前选定的主视图被隐藏了，则回退到第一个可见的视频
-    let mainBox = visibleBoxes.find(b => b.id === mainId) || visibleBoxes[0];
-
-    // 恢复所有可见盒子的默认显示
-    visibleBoxes.forEach(b => { 
-        b.style.display = 'flex'; 
-        b.classList.remove('large', 'default-main'); 
-    });
-    
-    // 为主视图添加大屏或默认主屏样式
-    large ? mainBox.classList.add('large') : mainBox.classList.add('default-main');
-    grid.appendChild(mainBox);
-
-    // 5. 安排侧边栏
-    const others = visibleBoxes.filter(b => b.id !== mainBox.id);
-    if (others.length > 0) {
-        const sidebar = document.createElement('div'); 
-        sidebar.className = 'video-sidebar';
-        others.forEach(b => sidebar.appendChild(b)); 
-        grid.appendChild(sidebar);
-    }
-}
+          const others = existingBoxes.filter(b => b.id !== mainBox.id);
+          if (others.length > 0) {
+              const sidebar = document.createElement('div'); sidebar.className = 'video-sidebar';
+              others.forEach(b => sidebar.appendChild(b)); grid.appendChild(sidebar);
+          }
+      }
 
       // ================= 计时器与任务逻辑 =================
       let timerInterval;

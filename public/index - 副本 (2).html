@@ -831,8 +831,7 @@
             });
         }
 
-        // ================= WebRTC 核心与修复 =================
-        // TURN 服务器配置预留位置 (解决非同一局域网黑屏问题)
+
         const rtcConfig = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -841,6 +840,8 @@
                 // { urls: 'turn:your-turn-server.com:3478', username: 'user', credential: 'password' }
             ] 
         };
+
+
 
         function createPeerConnection(remoteUserId) {
             if (peerConnections[remoteUserId]) return peerConnections[remoteUserId];
