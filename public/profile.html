@@ -24,7 +24,6 @@
         .back-btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; background: var(--bg-card); font-size: 14px; color: var(--text-secondary); transition: 0.2s; }
         .back-btn:hover { background: var(--bg-body); }
         
-        /* 核心容器：左右分栏卡片 */
         .container { 
             width: 100%; max-width: 1000px; 
             background: var(--bg-card); 
@@ -36,7 +35,6 @@
             border: 1px solid #eaeaea;
         }
         
-        /* 左侧个人信息 (还原图片侧边栏) */
         .glass-card:first-child { 
             width: 260px; 
             background: var(--bg-sidebar); 
@@ -48,6 +46,13 @@
         .profile-avatar { width: 60px; height: 60px; background: var(--primary-color); border-radius: 50%; margin: 0 auto 15px auto; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; font-weight: bold; }
         .profile-name { text-align: center; font-size: 18px; font-weight: 600; margin-bottom: 30px; }
         
+        .memos-btn {
+            padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border-color); cursor: pointer; background: var(--bg-card); font-size: 14px; color: var(--text-secondary); transition: 0.2s; }
+        
+        .memos-btn:hover {
+            background: var(--bg-body) !important;
+        }
+
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px; font-weight: 500; }
         .input-group input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); outline: none; transition: 0.2s; font-size: 13px; }
@@ -55,7 +60,6 @@
         .btn { width: 100%; padding: 10px; border-radius: 6px; border: none; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); font-size: 13px; transition: 0.2s; }
         .btn:hover { background: #f0f0f0; }
 
-        /* 右侧月历与记录 */
         .glass-card:last-child { 
             flex: 1; 
             padding: 40px; 
@@ -78,7 +82,6 @@
         .day-dot { width: 4px; height: 4px; background: var(--primary-light); border-radius: 50%; margin-top: 4px; display: none; }
         .day-cell.has-record .day-dot { display: block; }
 
-        /* 当天任务面板 - 极简时间轴风格 */
         .daily-detail { margin-top: 30px; padding-top: 20px; display: none; }
         .daily-detail.show { display: block; }
         .detail-title { font-size: 15px; font-weight: 600; margin-bottom: 20px; color: var(--text-main); }
@@ -94,9 +97,10 @@
 </head>
 <body>
 
-    <div class="nav-bar">
+    <div class="nav-bar" >
         <h3 style="font-size: 16px; font-weight: 500; color: var(--text-secondary);">云端自习室</h3>
-        <button class="back-btn" onclick="window.location.href='/index.html'">返回大厅</button>
+        <span style="color:#718096;">万物皆有裂痕，那是光照进来的地方。</span>
+        <button class="back-btn" id="dynamicBackBtn">返回大厅</button>
     </div>
 
     <div class="container">
@@ -104,7 +108,7 @@
             <div class="profile-avatar" id="avatarLetter">?</div>
             <div class="profile-name" id="displayName">加载中...</div>
             
-            <div style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <div id="editSection" style="margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 20px;">
                 <div class="input-group">
                     <label>专属昵称</label>
                     <input type="text" id="newNickname" placeholder="输入新昵称">
@@ -112,6 +116,7 @@
                 <button class="btn" onclick="updateNickname()" id="updateBtn">保存修改</button>
                 <div id="msgBox" style="text-align: center; margin-top: 10px; font-size: 12px;"></div>
             </div>
+            <button class="memos-btn" onclick="openMemos()" style="margin-top: 15px; width: 100%;">我的 Memos</button>
         </div>
 
         <div class="glass-card">
@@ -134,26 +139,62 @@
     </div>
 
     <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewUserId = urlParams.get('id'); 
+        const fromRoom = urlParams.get('fromRoom'); 
+        let targetUserId = null;
+
         let currentDate = new Date();
         let monthRecords = {};
 
         window.onload = async () => {
+            // 动态设置返回按钮
+            const backBtn = document.querySelector('.back-btn');
+            if (fromRoom) {
+                backBtn.innerText = '返回自习室';
+                backBtn.onclick = () => window.location.href = `/room.html?room=${fromRoom}`;
+            } else {
+                backBtn.innerText = '返回大厅';
+                backBtn.onclick = () => window.location.href = '/index.html';
+            }
+
             const token = localStorage.getItem('study_token');
             if (!token) return window.location.href = '/index.html';
 
             try {
-                const res = await fetch('/api/verify', { headers: { 'Authorization': `Bearer ${token}` } });
-                if (res.ok) {
-                    const data = await res.json();
-                    document.getElementById('displayName').innerText = data.user.nickname;
-                    document.getElementById('newNickname').value = data.user.nickname;
-                    document.getElementById('avatarLetter').innerText = data.user.nickname.charAt(0).toUpperCase();
+                // 获取当前登录用户（自己）
+                const selfRes = await fetch('/api/verify', { headers: { 'Authorization': `Bearer ${token}` } });
+                let myUser = null;
+                if (selfRes.ok) {
+                    const data = await selfRes.json();
+                    myUser = data.user;
                 } else {
-                    window.location.href = '/index.html';
+                    return window.location.href = '/index.html';
                 }
-            } catch (e) { }
 
-            renderCalendar();
+                // 判断当前需要渲染谁的数据
+                targetUserId = viewUserId || myUser.id;
+
+                if (targetUserId != myUser.id) {
+                    // 查看别人主页：隐藏修改昵称区域，渲染别人的基本信息
+                    document.getElementById('editSection').style.display = 'none';
+                    
+                    const profileRes = await fetch(`/api/user/${targetUserId}/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (profileRes.ok) {
+                        const pData = await profileRes.json();
+                        document.getElementById('displayName').innerText = pData.user.nickname;
+                        document.getElementById('avatarLetter').innerText = pData.user.nickname.charAt(0).toUpperCase();
+                    }
+                } else {
+                    // 查看自己主页：正常显示修改区域，渲染自己的信息
+                    document.getElementById('editSection').style.display = 'block';
+                    document.getElementById('displayName').innerText = myUser.nickname;
+                    document.getElementById('newNickname').value = myUser.nickname;
+                    document.getElementById('avatarLetter').innerText = myUser.nickname.charAt(0).toUpperCase();
+                }
+
+                renderCalendar(); 
+            } catch (e) { console.error('获取信息异常:', e); }
         };
 
         async function updateNickname() {
@@ -189,7 +230,8 @@
             const token = localStorage.getItem('study_token');
             const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
             try {
-                const res = await fetch(`/api/records/calendar?month=${monthStr}`, {
+                // 核心修改：请求时拼接 target_id 参数，拉取对应成员的月历数据
+                const res = await fetch(`/api/records/calendar?month=${monthStr}&target_id=${targetUserId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
@@ -270,6 +312,10 @@
             } else {
                 list.innerHTML = `<div class="empty-state">暂无记录</div>`;
             }
+        }
+        const MEMOS_URL = 'http://120.25.175.134:5230';
+        function openMemos() {
+            window.open(MEMOS_URL, '_blank', 'noopener,noreferrer');
         }
     </script>
 </body>

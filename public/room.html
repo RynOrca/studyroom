@@ -233,9 +233,11 @@
       <button id="btnScreen" onclick="toggleScreenShare()" class="btn-danger">💻 共享屏幕</button>
       <button onclick="toggleTheme()" title="切换主题样式">🌗 切换主题</button>
       <button class="styled-btn secondary" onclick="window.location.href = '/index.html'">🚪 返回大厅</button>
+    
     </div>
 
     <div class="top-bar">
+      <div class="stat-badge" onclick="openMemos()" style="cursor: pointer;" title="打开 Memos 笔记">📝 Memos</div>
       <div class="stat-badge"><span id="myNameDisplay">加载中...</span></div>
       <div class="stat-badge" id="hostStatusBadge" style="display: none; background: #f6d365; color: #fff; border: none">👑 房主</div>
       <div class="stat-badge" onclick="toggleUserList()" style="cursor: pointer; user-select: none" title="点击展开/收起成员列表">👥 在线: <span id="userCountDisplay">1</span></div>
@@ -349,7 +351,7 @@
       let myUserId;
       let isHost = false;
       let roomUsers = [];
-      let roomDataFromServer = { names: {}, timers: {} };
+      let roomDataFromServer = { names: {}, timers: {}, dbIds: {} };
       let myNickname = localStorage.getItem("study_nickname") || "同学";
       let currentMainId = "localVideoBox";
       let isLargeMode = false;
@@ -371,16 +373,50 @@
       let nudgeCooldowns = {};
       let alarmAudio = new Audio();
 
+      // 云端获取自定义音效
+      async function fetchCustomAudio() {
+        const token = localStorage.getItem("study_token");
+        if (!token) return;
+        try {
+            const res = await fetch('/api/user/audio', { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            if (data.audio_data) {
+                alarmAudio.src = data.audio_data;
+            }
+        } catch (e) {}
+      }
+      
+      const MEMOS_URL = 'http://120.25.175.134:5230'; // 你的 Memos 地址
+
+      function openMemos() {
+        window.open(MEMOS_URL, '_blank', 'noopener,noreferrer');
+      }
+
       function handleAudioUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
         if (file.size > 10 * 1024 * 1024) {
-          alert("文件过大！");
+          alert("文件过大！请限制在 10MB 内。");
           event.target.value = "";
           return;
         }
-        alarmAudio.src = URL.createObjectURL(file);
-        alert("自定义音效设置成功！");
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64Audio = e.target.result;
+            alarmAudio.src = base64Audio;
+            alert("自定义音效设置成功！正在为您保存到云端...");
+            
+            const token = localStorage.getItem("study_token");
+            try {
+                await fetch('/api/user/audio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ audio_data: base64Audio })
+                });
+            } catch(err) { console.error('音效保存失败', err); }
+        };
+        reader.readAsDataURL(file);
       }
 
       function playAlarmSound() {
@@ -413,13 +449,14 @@
 
       window.onload = () => {
         document.title = `自习室: ${ROOM_ID}`;
+        fetchCustomAudio(); 
         initSocket();
         renderTasks();
         arrangeLayout(currentMainId, isLargeMode);
         restoreStateOnLoad();
       };
 
-      // ================= Socket 与 WebRTC 联合逻辑 (完全沿用旧版 index 3) =================
+      // ================= Socket 与 WebRTC 联合逻辑 =================
       function initSocket() {
         const token = localStorage.getItem("study_token");
         if (!token) return (window.location.href = "/index.html");
@@ -470,7 +507,6 @@
           }
         });
 
-        // ⚠️ 最强秒通秘籍：收到新用户加入时，主动创建 Offer 并包含自己的所有轨道
         socket.on('user_joined', async (newUserId) => {
             const pc = createPeerConnection(newUserId);
             if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
@@ -503,6 +539,21 @@
         });
       }
 
+      // 关键修改：携带 fromRoom 参数在当前窗口跳转
+      function viewProfile(socketId) {
+          if (!roomDataFromServer.dbIds) {
+              alert('服务端尚未同步用户数据，请确保已替换 server.js 并且重启了后端服务器！');
+              return;
+          }
+          
+          const dbId = roomDataFromServer.dbIds[socketId];
+          if (dbId) {
+              window.location.href = `/profile.html?id=${dbId}&fromRoom=${ROOM_ID}`;
+          } else {
+              alert('无法获取该用户信息');
+          }
+      }
+
       function renderUserList(hostId) {
         const container = document.getElementById("userListContainer");
         container.innerHTML = "";
@@ -515,7 +566,15 @@
           const item = document.createElement("div");
           item.className = "user-list-item";
           if (id === myUserId) item.style.borderLeft = "4px solid var(--primary-color)";
-          item.innerHTML = `<div class="user-list-name" id="list_name_${id}">加载中...</div><div class="user-list-status" id="list_status_${id}">加载中...</div>`;
+          
+          item.style.cursor = "pointer";
+          item.title = "点击查看资料";
+          item.onclick = () => viewProfile(id);
+
+          item.innerHTML = `
+              <div class="user-list-name" id="list_name_${id}">加载中...</div>
+              <div class="user-list-status" id="list_status_${id}">加载中...</div>
+          `;
           container.appendChild(item);
         });
         updateAllVideoLabels();
@@ -525,7 +584,7 @@
         roomUsers.forEach((id) => {
           const isMe = id === myUserId;
           const customName = isMe ? myNickname : roomDataFromServer.names[id] || `成员(${id.substring(0, 4)})`;
-          const isPomodoro = document.getElementById("timerStatus").innerText.includes("专注");
+          const isPomodoro = document.getElementById("timerStatus").innerText.includes("专注") || document.getElementById("timerStatus").innerText.includes("休息");
           const timerStatus = isMe ? getTimerStatusString(isPomodoro) : roomDataFromServer.timers[id] || "暂无任务";
 
           const labelContainer = isMe ? document.querySelector("#localVideoBox .video-info-text") : document.querySelector(`#box_${id} .video-info-text`);
@@ -541,10 +600,7 @@
         });
       }
 
-      // =========================================================================
-      // 【完全还原旧版 (index - 副本 3.html) 的核心 WebRTC 媒体控制模块】
-      // 不隐藏黑屏，彻底解决 P2P 穿透丢失的问题
-      // =========================================================================
+      // ================= WebRTC =================
       let peerConnections = {}; 
       let localStream = null;      
       let cameraTrack = null; 
@@ -554,30 +610,23 @@
       let isMicOpen = false;
       let isSharingScreen = false; 
 
-      //-----------------------------视频同步传输-------------------------------
       const rtcConfig = { 
           iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
               { urls: 'stun:stun1.l.google.com:19302' },
-              // 👇👇👇 请在这里替换为你自己的阿里云 Coturn 配置 👇👇👇
               {
-                  urls: 'turn:120.25.175.134:3478', // 【必须修改】例如: 'turn:120.25.175.134:3478'
-                  username: 'TRANS',            // 【必须修改】例如: 'TRANS'
-                  credential: 'ABC123456'             // 【必须修改】例如: 'ABC123456'
+                  urls: 'turn:120.25.175.134:3478',
+                  username: 'TRANS',
+                  credential: 'ABC123456'
               },
               {
-                  urls: 'turn:120.25.175.134:3478?transport=tcp', // 【必须修改】
-                  username: 'TRANS',                         // 【必须修改】
-                  credential: 'ABC123456'                          // 【必须修改】
-              },
-              // 👆👆👆 ------------------------------------------ 👆👆👆
-              { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'stun:stun1.l.google.com:19302' }
+                  urls: 'turn:120.25.175.134:3478?transport=tcp',
+                  username: 'TRANS',
+                  credential: 'ABC123456'
+              }
           ], 
           iceCandidatePoolSize: 10 
       };
-
-      //----------------------------------------------------------------
 
       function adjustRemoteVolume(remoteUserId, value) {
           const audioEl = document.getElementById(`audio_${remoteUserId}`);
@@ -615,7 +664,6 @@
               if (event.track.kind === 'video') {
                   let remoteVideoE = document.getElementById(`video_${remoteUserId}`);
                   if (!remoteVideoE) {
-                      // 这里绝对不加 no-video 隐藏类，保留占位黑框，防止 WebRTC 绑定不到 DOM 元素！
                       const html = `<div class="video-box" id="box_${remoteUserId}" onclick="togglePin('box_${remoteUserId}')">
                           <video id="video_${remoteUserId}" autoplay playsinline muted></video>
                           <div class="video-label">
@@ -630,7 +678,7 @@
                       remoteVideoE = document.getElementById(`video_${remoteUserId}`);
                   }
                   if (remoteVideoE.srcObject !== event.streams[0]) remoteVideoE.srcObject = event.streams[0];
-                  //新增
+                  
                   event.track.onunmute = () => setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
                   event.track.onmute = () => setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
                   event.track.onended = () => setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
@@ -654,7 +702,6 @@
           setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
       }
 
-      // [核心精华] 完美的替换轨道逻辑，绝不多建通道，也绝不摧毁底层连接
       function updateTrackStatus(newTrack, trackType, isSystemAudio = false) {
           if (!localStream) localStream = new MediaStream();
           const oldTracks = localStream.getTracks().filter(t => {
@@ -685,13 +732,13 @@
                   document.getElementById('localVideo').srcObject = new MediaStream([cameraTrack]); 
                   updateTrackStatus(cameraTrack, 'video'); 
                   isCamOpen = true; btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
-                  arrangeLayout(currentMainId, isLargeMode); // 新增：刷新网格
+                  arrangeLayout(currentMainId, isLargeMode);
               } catch (err) { alert("无法访问摄像头!"); }
           } else {
               try { if (cameraTrack) { cameraTrack.stop(); updateTrackStatus(null, 'video'); } } catch(e) {}
               isCamOpen = false; btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
               document.getElementById('localVideo').srcObject = null;
-              arrangeLayout(currentMainId, isLargeMode); // 新增：刷新网格
+              arrangeLayout(currentMainId, isLargeMode); 
           }
       }
 
@@ -726,7 +773,7 @@
                   if (screenAudioTrack) updateTrackStatus(screenAudioTrack, 'audio', true); 
                   isSharingScreen = true; btn.innerText = "💻 停止共享"; btn.classList.add('active');
                   screenTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
-                  arrangeLayout(currentMainId, isLargeMode); // 新增：刷新网格
+                  arrangeLayout(currentMainId, isLargeMode); 
               } catch (err) {}
           } else {
               try {
@@ -737,7 +784,7 @@
               } catch(e) {}
               isSharingScreen = false; btn.innerText = "💻 共享屏幕"; btn.classList.remove('active'); 
               document.getElementById('localVideo').srcObject = null;
-              arrangeLayout(currentMainId, isLargeMode); // 新增：刷新网格
+              arrangeLayout(currentMainId, isLargeMode); 
           }
       }
 
@@ -747,73 +794,62 @@
           arrangeLayout(currentMainId, isLargeMode);
       }
 
-      // [核心精华] 重写排布逻辑：动态过滤无视频成员，恢复正常大小
-function arrangeLayout(mainId, large) {
-    const grid = document.getElementById('videoGrid');
-    const allBoxes = Array.from(document.querySelectorAll('.video-box'));
-    
-    // 1. 判断并过滤出真正有视频流的盒子
-    const visibleBoxes = allBoxes.filter(box => {
-        const video = box.querySelector('video');
-        let isActive = false;
-        
-        if (box.id === 'localVideoBox') {
-            // 本地盒子根据摄像头或屏幕共享的状态判断
-            isActive = isCamOpen || isSharingScreen;
-        } else if (video && video.srcObject) {
-            // 远程盒子根据视频轨道状态判断 (存在轨道、活跃、且未处于 muted 无数据状态)
-            const tracks = video.srcObject.getVideoTracks();
-            isActive = tracks.length > 0 && tracks.some(t => t.readyState === 'live' && t.enabled && !t.muted);
-        }
-        return isActive;
-    });
+      function arrangeLayout(mainId, large) {
+          const grid = document.getElementById('videoGrid');
+          const allBoxes = Array.from(document.querySelectorAll('.video-box'));
+          
+          const visibleBoxes = allBoxes.filter(box => {
+              const video = box.querySelector('video');
+              let isActive = false;
+              
+              if (box.id === 'localVideoBox') {
+                  isActive = isCamOpen || isSharingScreen;
+              } else if (video && video.srcObject) {
+                  const tracks = video.srcObject.getVideoTracks();
+                  isActive = tracks.length > 0 && tracks.some(t => t.readyState === 'live' && t.enabled && !t.muted);
+              }
+              return isActive;
+          });
 
-    const hiddenBoxes = allBoxes.filter(box => !visibleBoxes.includes(box));
+          const hiddenBoxes = allBoxes.filter(box => !visibleBoxes.includes(box));
 
-    // 清空网格 (注意：不能用 innerHTML +=，否则会破坏现有视频的 DOM 绑定)
-    grid.innerHTML = '';
+          grid.innerHTML = '';
 
-    // 2. 将隐藏的盒子强行保留在 DOM 中，保证 WebRTC 底层绑定不断开
-    hiddenBoxes.forEach(b => { 
-        b.style.display = 'none'; 
-        b.classList.remove('large', 'default-main');
-        grid.appendChild(b); 
-    });
+          hiddenBoxes.forEach(b => { 
+              b.style.display = 'none'; 
+              b.classList.remove('large', 'default-main');
+              grid.appendChild(b); 
+          });
 
-    // 3. 如果当前没有任何活跃视频，显示占位提示
-    if (visibleBoxes.length === 0) {
-        const placeholder = document.createElement('div');
-        placeholder.id = 'noVideoPlaceholder';
-        placeholder.style.cssText = 'color: var(--text-tertiary); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 15px; font-weight: 500; text-align: center;';
-        placeholder.innerText = '当前无成员开启摄像头或共享屏幕';
-        grid.appendChild(placeholder);
-        return;
-    }
+          if (visibleBoxes.length === 0) {
+              const placeholder = document.createElement('div');
+              placeholder.id = 'noVideoPlaceholder';
+              placeholder.style.cssText = 'color: var(--text-tertiary); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 15px; font-weight: 500; text-align: center;';
+              placeholder.innerText = '当前无成员开启摄像头或共享屏幕';
+              grid.appendChild(placeholder);
+              return;
+          }
 
-    // 4. 确定主视图：如果当前选定的主视图被隐藏了，则回退到第一个可见的视频
-    let mainBox = visibleBoxes.find(b => b.id === mainId) || visibleBoxes[0];
+          let mainBox = visibleBoxes.find(b => b.id === mainId) || visibleBoxes[0];
 
-    // 恢复所有可见盒子的默认显示
-    visibleBoxes.forEach(b => { 
-        b.style.display = 'flex'; 
-        b.classList.remove('large', 'default-main'); 
-    });
-    
-    // 为主视图添加大屏或默认主屏样式
-    large ? mainBox.classList.add('large') : mainBox.classList.add('default-main');
-    grid.appendChild(mainBox);
+          visibleBoxes.forEach(b => { 
+              b.style.display = 'flex'; 
+              b.classList.remove('large', 'default-main'); 
+          });
+          
+          large ? mainBox.classList.add('large') : mainBox.classList.add('default-main');
+          grid.appendChild(mainBox);
 
-    // 5. 安排侧边栏
-    const others = visibleBoxes.filter(b => b.id !== mainBox.id);
-    if (others.length > 0) {
-        const sidebar = document.createElement('div'); 
-        sidebar.className = 'video-sidebar';
-        others.forEach(b => sidebar.appendChild(b)); 
-        grid.appendChild(sidebar);
-    }
-}
+          const others = visibleBoxes.filter(b => b.id !== mainBox.id);
+          if (others.length > 0) {
+              const sidebar = document.createElement('div'); 
+              sidebar.className = 'video-sidebar';
+              others.forEach(b => sidebar.appendChild(b)); 
+              grid.appendChild(sidebar);
+          }
+      }
 
-      // ================= 计时器与任务逻辑 =================
+      // ================= 计时器与自动休息 =================
       let timerInterval;
       let totalSeconds = 0;
       let isTimerRunning = false;
@@ -825,7 +861,7 @@ function arrangeLayout(mainId, large) {
         const m = Math.floor(totalSeconds / 60);
         const s = (totalSeconds % 60).toString().padStart(2, "0");
         const timeStr = isPomodoro ? `剩余 ${m}:${s}` : `已计 ${m}:${s}`;
-        const taskName = currentFocusTask || (isPomodoro ? "番茄钟" : "正计时");
+        const taskName = currentFocusTask || (isPomodoro ? (document.getElementById("timerStatus").innerText.includes("休息") ? "休息中" : "番茄钟") : "正计时");
         return `${taskName} | ${timeStr}${isTimerPaused ? " (暂停)" : ""}`;
       }
 
@@ -835,7 +871,7 @@ function arrangeLayout(mainId, large) {
 
       function updateDisplay(sec) {
         document.getElementById("timeDisplay").innerText = `${Math.floor(sec / 60).toString().padStart(2, "0")}:${(sec % 60).toString().padStart(2, "0")}`;
-        const isPomodoro = document.getElementById("timerStatus").innerText.includes("专注") || isCurrentPomodoro;
+        const isPomodoro = document.getElementById("timerStatus").innerText.includes("专注") || document.getElementById("timerStatus").innerText.includes("休息") || isCurrentPomodoro;
         const localLabelSpan = document.getElementById("localVideoStatus");
         if (localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isPomodoro);
         if (sec % 5 === 0) broadcastTimerStatus(isPomodoro);
@@ -900,7 +936,9 @@ function arrangeLayout(mainId, large) {
                     totalSeconds--; updateDisplay(totalSeconds); saveTimerStateToLocal();
                   } else {
                     clearInterval(timerInterval); recordFocusSession(true); playAlarmSound(); clearTimerState();
-                    alert("专注结束！开始休息吧。"); stopTimer(true);
+                    alert("专注结束！开始休息吧。"); 
+                    stopTimer(true);
+                    startBreakTimer(); 
                   }
                 } else {
                   totalSeconds++; updateDisplay(totalSeconds); saveTimerStateToLocal();
@@ -959,6 +997,30 @@ function arrangeLayout(mainId, large) {
         document.getElementById("timelineContainer").insertAdjacentHTML("afterbegin", html);
       }
 
+      function startBreakTimer() {
+        clearInterval(timerInterval);
+        const mins = parseInt(document.getElementById("breakTime").value) || 5;
+        totalSeconds = mins * 60; sessionAccumulatedSecs = 0; isTimerRunning = true; isTimerPaused = false;
+        recordTaskName = "休息中"; isCurrentPomodoro = false;
+        document.getElementById("timerStatus").innerText = "☕ 休息中";
+        document.getElementById("btnPause").style.display = "inline-block";
+        document.getElementById("btnPause").innerText = "暂停";
+        updateDisplay(totalSeconds);
+        broadcastTimerStatus(true); 
+        
+        timerInterval = setInterval(() => {
+          if (!isTimerPaused) {
+            if (totalSeconds > 0) {
+              totalSeconds--; updateDisplay(totalSeconds);
+            } else {
+              clearInterval(timerInterval); playAlarmSound();
+              alert("休息结束！准备开始下一个番茄钟吧。");
+              stopTimer(true);
+            }
+          }
+        }, 1000);
+      }
+
       function startStopwatch() {
         clearInterval(timerInterval);
         totalSeconds = 0; sessionAccumulatedSecs = 0; isTimerRunning = true; isTimerPaused = false;
@@ -995,7 +1057,9 @@ function arrangeLayout(mainId, large) {
               totalSeconds--; updateDisplay(totalSeconds); saveTimerStateToLocal();
             } else {
               clearInterval(timerInterval); recordFocusSession(true); playAlarmSound(); clearTimerState();
-              alert("专注结束！开始休息吧。"); stopTimer(true);
+              alert("专注结束！开始休息吧。"); 
+              stopTimer(true);
+              startBreakTimer(); 
             }
           }
         }, 1000);
@@ -1006,14 +1070,19 @@ function arrangeLayout(mainId, large) {
         isTimerPaused = !isTimerPaused;
         const btn = document.getElementById("btnPause");
         const status = document.getElementById("timerStatus");
+        
+        const isResting = status.innerText.includes("休息");
         if (isTimerPaused) {
           btn.innerText = "继续"; status.innerText = "⏸️ 已暂停";
         } else {
-          btn.innerText = "暂停"; status.innerText = isCurrentPomodoro ? "🔥 专注中" : "⏳ 正计时中";
+          btn.innerText = "暂停"; 
+          if(isResting) status.innerText = "☕ 休息中";
+          else status.innerText = isCurrentPomodoro ? "🔥 专注中" : "⏳ 正计时中";
         }
+        
         const localLabelSpan = document.getElementById("localVideoStatus");
-        if (localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isCurrentPomodoro);
-        broadcastTimerStatus(isCurrentPomodoro);
+        if (localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isCurrentPomodoro || isResting);
+        broadcastTimerStatus(isCurrentPomodoro || isResting);
         saveTimerStateToLocal();
       }
 
@@ -1195,7 +1264,6 @@ function arrangeLayout(mainId, large) {
           box.scrollTop = box.scrollHeight;
       }
 
-      // 修复：在页面刷新或关闭前，主动秒断开 WebSocket 连接，防止出现“幽灵分身”
       window.addEventListener('beforeunload', () => {
           if (socket) {
               socket.disconnect(); 

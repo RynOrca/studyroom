@@ -11,8 +11,12 @@ const server = http.createServer(app);
 // 用于签发 JWT 的秘钥
 const JWT_SECRET = 'super_secret_study_room_key_2026'; 
 
-app.use(express.json());
+// 注意：这里将请求体大小限制提升至 15mb，用于支持 Base64 音频上传
+app.use(express.json({ limit: '15mb' }));
 app.use(express.static('public'));
+
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
 
 // ================= HTTP API: 用户系统 =================
 app.post('/api/register', async (req, res) => {
@@ -48,17 +52,23 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
-        if (err) return res.status(500).json({ error: '数据库错误' });
-        if (!user) return res.status(401).json({ error: '账号或密码错误' });
+  const { username, password } = req.body;
+  db.get(`SELECT * FROM users WHERE username = ?`, [username], async (err, user) => {
+    // ... 原有的验证代码 ...
+    if (!isMatch) return res.status(401).json({ error: '账号或密码错误' });
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(401).json({ error: '账号或密码错误' });
-
-        const token = jwt.sign({ id: user.id, username: user.username, nickname: user.nickname }, JWT_SECRET, { expiresIn: '7d' });
-        res.json({ message: '登录成功', token, user: { id: user.id, username: user.username, nickname: user.nickname } });
+    const token = jwt.sign({ id: user.id, username: user.username, nickname: user.nickname }, JWT_SECRET, { expiresIn: '7d' });
+    
+    // 设置 HttpOnly Cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7天
+      sameSite: 'lax',  // 允许跨站重定向携带 Cookie
+      // 生产环境建议添加 secure: true（需要 HTTPS）
     });
+
+    res.json({ message: '登录成功', token, user: { id: user.id, username: user.username, nickname: user.nickname } });
+  });
 });
 
 app.get('/api/verify', (req, res) => {
@@ -71,7 +81,7 @@ app.get('/api/verify', (req, res) => {
 });
 
 
-// ================= HTTP API: 专注记录系统 =================
+// ================= HTTP API: 专注记录与设置系统 =================
 
 // 中间件：用于验证 Token 并解析出 user_id (给需要登录的接口使用)
 const authenticateToken = (req, res, next) => {
@@ -138,7 +148,8 @@ app.put('/api/user/nickname', authenticateToken, (req, res) => {
 
 // 4. 获取专注月历数据接口 (按月聚合)
 app.get('/api/records/calendar', authenticateToken, (req, res) => {
-    const user_id = req.user.id;
+    // 核心修改：接收前端传来的 target_id，如果没传才默认查自己的
+    const user_id = req.query.target_id || req.user.id;
     const month = req.query.month; // 预期格式 'YYYY-MM'
     if (!month) return res.status(400).json({ error: '缺少月份参数' });
 
@@ -185,6 +196,32 @@ app.get('/api/records/recent', authenticateToken, (req, res) => {
     });
 });
 
+// 6. 获取和保存自定义音效接口
+app.get('/api/user/audio', authenticateToken, (req, res) => {
+    db.get(`SELECT custom_audio FROM users WHERE id = ?`, [req.user.id], (err, row) => {
+        if (err) return res.status(500).json({ error: '获取音效失败' });
+        res.json({ audio_data: row ? row.custom_audio : null });
+    });
+});
+
+app.post('/api/user/audio', authenticateToken, (req, res) => {
+    const { audio_data } = req.body;
+    db.run(`UPDATE users SET custom_audio = ? WHERE id = ?`, [audio_data, req.user.id], function(err) {
+        if (err) return res.status(500).json({ error: '保存音效失败' });
+        res.json({ message: '音效保存成功' });
+    });
+});
+
+// 7. 获取其他用户的公开资料 (获取基础信息)
+app.get('/api/user/:id/profile', authenticateToken, (req, res) => {
+    const targetUserId = req.params.id;
+    db.get(`SELECT id, nickname, created_at FROM users WHERE id = ?`, [targetUserId], (err, user) => {
+        if (err || !user) return res.status(404).json({ error: '用户不存在' });
+        res.json({ user: { id: user.id, nickname: user.nickname, created_at: user.created_at } });
+    });
+});
+
+
 // ================= Socket.io 配置与鉴权 =================
 let ioOptions = {};
 try {
@@ -230,7 +267,8 @@ io.on('connection', (socket) => {
                 host: null,         
                 chatEnabled: true,  
                 names: {},          
-                timers: {}          
+                timers: {},
+                dbIds: {} 
             };
         }
         
@@ -241,11 +279,10 @@ io.on('connection', (socket) => {
             roomData.host = socket.id;
         }
 
-        // 直接使用数据库中的合法昵称，不再提供默认生成的昵称
         roomData.names[socket.id] = socket.user.nickname;
         roomData.timers[socket.id] = '暂无专注任务';
+        roomData.dbIds[socket.id] = socket.user.id; 
 
-        // 只向当前房间内所有人广播最新状态
         io.to(roomId).emit('room_update', roomData);
         socket.to(roomId).emit('user_joined', socket.id);
     });
@@ -279,8 +316,6 @@ io.on('connection', (socket) => {
     });
 
     // ================= 4. 全局状态实时同步 =================
-    // (注意：去掉了 update_name，因为要求名称只能在个人主页更改)
-
     socket.on('sync_timer', (statusStr) => {
         if (!currentRoom) return;
         const roomData = rooms[currentRoom];
@@ -308,8 +343,8 @@ io.on('connection', (socket) => {
 
         delete roomData.names[socket.id];
         delete roomData.timers[socket.id];
+        delete roomData.dbIds[socket.id];
 
-        // 如果房间空了，为了防止内存泄漏，清理该房间
         if (roomData.users.length === 0) {
             delete rooms[currentRoom];
         } else {
@@ -323,7 +358,6 @@ io.on('connection', (socket) => {
 let currentPort = 3000;
 
 function startServer(port) {
-    // 使用 .once 代替 .on，确保这个监听器只执行一次，执行完就销毁
     server.once('error', (err) => {
         if (err.code === 'EADDRINUSE') {
             console.warn(`⚠️ 端口 ${port} 已被占用，尝试使用端口 ${port + 1}`);

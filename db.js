@@ -19,8 +19,14 @@ db.serialize(() => {
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         nickname TEXT NOT NULL,
+        custom_audio TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+
+    // 尝试添加新列以兼容老数据库
+    db.run(`ALTER TABLE users ADD COLUMN custom_audio TEXT`, (err) => {
+        // 如果字段已经存在则会报错，由于只是为了兼容旧库，这里的报错直接忽略即可
+    });
     
     // 2. 创建专注记录表 (新增)
     db.run(`CREATE TABLE IF NOT EXISTS focus_records (
@@ -33,7 +39,7 @@ db.serialize(() => {
         FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
     
-    console.log('✅ 数据表检查/初始化完成 (包含 focus_records)');
+    console.log('✅ 数据表检查/初始化完成 (包含 focus_records 和音频扩展)');
 });
 
 // 导出 db 供 server.js 使用

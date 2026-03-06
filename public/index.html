@@ -39,6 +39,17 @@
         .action-btn:hover { background: #e2e8f0; color: var(--text-main); }
         .action-btn.danger:hover { background: #fee2e2; color: #ef4444; }
 
+        /* 让“我的 Memos”按钮更明显 */
+        .action-btn.memos {
+            { background: transparent; border: none; text-align: left; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: 500; color: var(--text-sec); transition: 0.2s; }
+        }
+        .action-btn.memos:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+        
+
+
         /* 右侧时间轴 */
         .main-content { flex: 1; padding: 30px 40px; overflow-y: auto; background: white; }
         .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
@@ -89,6 +100,7 @@
             <div class="room-btn" onclick="enterRoom('roomC')"><span class="icon">🤤</span> 心定如磐</div>
             
             <div class="sidebar-bottom">
+                <button class="action-btn memos" onclick="openMemos()">我的 Memos</button>
                 <button class="action-btn" onclick="window.location.href='/profile.html'">个人资料</button>
                 <button class="action-btn danger" onclick="logout()">退出登录</button>
             </div>
@@ -141,10 +153,17 @@
                     document.getElementById('authMessage').innerText = data.error;
                 } else {
                     if (isLoginMode) {
-                        localStorage.setItem('study_token', data.token);
-                        localStorage.setItem('study_nickname', data.user.nickname);
-                        showDashboard(data.user);
-                    } else {
+  localStorage.setItem('study_token', data.token);
+  localStorage.setItem('study_nickname', data.user.nickname);
+  // 检查是否有 redirect 参数
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirect = urlParams.get('redirect');
+  if (redirect) {
+    window.location.href = redirect;
+  } else {
+    showDashboard(data.user);
+  }
+} else {
                         document.getElementById('authMessage').innerText = '注册成功！请登录。';
                         document.getElementById('authMessage').style.color = '#1dd1a1';
                         setTimeout(() => toggleMode(), 1000);
@@ -213,6 +232,10 @@
         }
 
         function enterRoom(roomId) { window.location.href = `/room.html?room=${roomId}`; }
+        const MEMOS_URL = 'http://120.25.175.134:5230';
+        function openMemos() {
+            window.open(MEMOS_URL, '_blank', 'noopener,noreferrer');
+        }
     </script>
 </body>
 </html>
