@@ -1,19 +1,17 @@
-// oauth-model.js
 const crypto = require('crypto');
 
-// 客户端信息（Memos）
 const clients = [
   {
     id: 'memos-client',
     clientId: 'memos-client',
-    clientSecret: '6666yyds', // 替换为你自己的密钥
+    clientSecret: '6666yyds', 
     grants: ['authorization_code'],
-    redirectUris: ['http://120.25.175.134:5230/auth/callback'], // Memos 回调地址
+    redirectUris: ['http://120.25.175.134:5230/auth/callback'], 
   }
 ];
 
-const tokens = new Map();       // accessToken -> 令牌对象
-const authorizationCodes = new Map(); // code -> 授权码对象
+const tokens = new Map();       
+const authorizationCodes = new Map(); 
 
 module.exports = {
   getClient: (clientId, clientSecret) => {
@@ -54,6 +52,7 @@ module.exports = {
     return tokens.get(accessToken);
   },
   verifyScope: (token, scope) => {
-    return true; // 简化，不校验 scope
+    return true; 
   },
+
 };
