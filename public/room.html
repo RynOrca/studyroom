@@ -1,765 +1,1343 @@
-﻿<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>云端自习室 - 专注每一刻</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script>
+      (function initTheme() {
+        const savedTheme = localStorage.getItem("study_theme");
+        if (savedTheme === "minimal") {
+          document.documentElement.setAttribute("data-theme", "minimal");
+        }
+      })();
+    </script>
     <style>
-        :root { --bg-color: #f0f2f5; --panel-bg: #ffffff; --primary-color: #52c41a; --primary-hover: #73d13d; --danger-color: #ff4d4f; --text-main: #262626; --text-secondary: #8c8c8c; --border-color: #f0f0f0; --radius: 12px; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+      /* ================= 1. 默认主题：渐变毛玻璃 ================= */
+      :root {
+        --radius-sm: 8px; --radius-md: 16px; --radius-lg: 24px;
+        --transition-fast: 0.2s ease;
+        --primary-color: #667eea; --primary-light: #764ba2; --primary-hover: #5a6fe0;
+        --danger-color: #fc6076; --danger-hover: #ff9a44; --warning-color: #f6d365; --success-color: #1dd1a1;
+        --text-main: #2d3748; --text-secondary: #4a5568; --text-tertiary: #a0aec0;
+        --body-bg: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+        --card-bg: rgba(255, 255, 255, 0.65); --card-backdrop: blur(12px);
+        --card-border: 1px solid rgba(255, 255, 255, 0.5); --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        --btn-primary-bg: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+        --btn-danger-bg: linear-gradient(135deg, var(--danger-color) 0%, var(--danger-hover) 100%);
+        --btn-hover-transform: translateY(-1px); --btn-hover-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        --btn-sec-bg: rgba(255, 255, 255, 0.5); --btn-sec-border: 1px solid rgba(255, 255, 255, 0.8);
+        --btn-sec-color: var(--text-main); --btn-sec-hover-bg: rgba(255, 255, 255, 0.8);
+        --top-btn-bg: var(--card-bg); --top-btn-color: var(--text-main); --top-btn-border: var(--card-border);
+        --input-bg: rgba(255, 255, 255, 0.7); --input-border: 1px solid rgba(255, 255, 255, 0.6);
+        --input-focus-bg: #fff; --input-focus-border: var(--primary-color); --input-focus-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        --item-bg: rgba(255, 255, 255, 0.5); --item-hover-bg: rgba(255, 255, 255, 0.8);
+        --item-border-base: transparent; --item-hover-border: transparent; --item-hover-transform: translateX(2px);
+        --divider-dashed: 1px dashed rgba(255, 255, 255, 0.3); --divider-solid: 1px solid rgba(0, 0, 0, 0.05);
+        --msg-self-bg: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+        --msg-self-color: white; --msg-other-bg: rgba(255, 255, 255, 0.8); --msg-other-border: none;
+        --timer-status-bg: rgba(255, 255, 255, 0.8); --stat-box-bg: rgba(255, 255, 255, 0.4);
+        --video-box-bg: #000; --video-border: 2px solid transparent; --video-hover-border: var(--primary-light);
+      }
 
-        /* ====== 右上角状态栏 ====== */
-        .top-bar { position: absolute; top: 20px; right: 20px; z-index: 20; display: flex; gap: 10px; }
-        .stat-badge { background: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 20px; font-size: 13px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 5px;}
-        .host-badge { background: #faad14; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 5px; font-weight: bold;}
-        .edit-name-btn { cursor: pointer; transition: 0.2s; }
-        .edit-name-btn:hover { color: var(--primary-color); }
+      /* ================= 2. 极简主题：白灰扁平 ================= */
+      [data-theme="minimal"] {
+        --radius-sm: 6px; --radius-md: 10px; --radius-lg: 20px;
+        --primary-color: #5c6ac4; --primary-light: #818cf8; --primary-hover: #4338ca;
+        --danger-color: #ef4444; --danger-hover: #dc2626; --warning-color: #f59e0b;
+        --text-main: #1f2937; --text-secondary: #4b5563; --text-tertiary: #9ca3af;
+        --body-bg: #f4f5f7; --card-bg: #ffffff; --card-backdrop: none;
+        --card-border: 1px solid #eaeaea; --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        --btn-primary-bg: var(--primary-color); --btn-danger-bg: var(--danger-color);
+        --btn-hover-transform: none; --btn-hover-shadow: none;
+        --btn-sec-bg: #ffffff; --btn-sec-border: 1px solid #eaeaea;
+        --btn-sec-color: var(--text-secondary); --btn-sec-hover-bg: #f9fafc;
+        --top-btn-bg: #ffffff; --top-btn-color: var(--text-secondary); --top-btn-border: 1px solid #eaeaea;
+        --input-bg: #f9fafc; --input-border: 1px solid #eaeaea;
+        --input-focus-bg: #fff; --input-focus-border: var(--primary-light); --input-focus-shadow: none;
+        --item-bg: #f9fafc; --item-hover-bg: #f9fafc;
+        --item-border-base: 1px solid transparent; --item-hover-border: 1px solid #eaeaea; --item-hover-transform: none;
+        --divider-dashed: 1px solid #eaeaea; --divider-solid: 1px solid #eaeaea;
+        --msg-self-bg: var(--primary-color); --msg-self-color: white;
+        --msg-other-bg: #f9fafc; --msg-other-border: 1px solid #eaeaea;
+        --timer-status-bg: #f9fafc; --stat-box-bg: #f9fafc;
+        --video-box-bg: #000; --video-border: 1px solid #374151; --video-hover-border: 1px solid var(--text-tertiary);
+      }
 
-        /* ====== 1. 响应式视频区域 ====== */
-        .video-container { flex: 1; padding: 15px; display: flex; flex-direction: column; align-items: center; background: #1f1f1f; position: relative; overflow: hidden; width: 100%;}
-        
-        /* 采用弹性盒子，填满容器 */
-        .video-grid { display: flex; gap: 15px; width: 100%; height: 100%; max-width: 1600px; justify-content: center; align-items: stretch; padding-bottom: 60px; /* 留出底部按钮空间 */ }
-        
-        .video-box { background: #000; border-radius: var(--radius); overflow: hidden; position: relative; cursor: pointer; border: 2px solid transparent; transition: all 0.25s ease; display: flex; flex-direction: column;}
-        .video-box video { width: 100%; height: 100%; object-fit: contain; display: block; flex: 1;}
-        .video-label { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; line-height: 1.4; display: flex; flex-direction: column; gap: 2px; max-width: 90%; word-wrap: break-word; z-index: 2;}
+      * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      body { background: var(--body-bg); color: var(--text-main); height: 100vh; overflow: hidden; line-height: 1.5; transition: background 0.3s ease; }
 
-        /* 主视频自适应：占据大部分空间 */
-        .video-box.large, .video-box.default-main { flex: 1; min-width: 0; height: 100%; max-height: 100%; }
+      .glass-card {
+        background: var(--card-bg); backdrop-filter: var(--card-backdrop); -webkit-backdrop-filter: var(--card-backdrop);
+        border: var(--card-border); border-radius: var(--radius-md); box-shadow: var(--card-shadow);
+        display: flex; flex-direction: column; overflow: hidden; padding: 20px; transition: all 0.3s ease;
+      }
 
-        /* 侧边栏自适应：按比例缩放 */
-        .video-sidebar { width: 25%; max-width: 280px; min-width: 150px; height: 100%; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px;}
-        .video-sidebar .video-box { width: 100%; height: auto; aspect-ratio: 16/9; flex-shrink: 0; min-height: unset;}
-        .video-sidebar.empty { display: none; }
-        .video-sidebar::-webkit-scrollbar { width: 6px; }
-        .video-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+      .app-layout {
+        display: grid; grid-template-columns: 320px 1fr 340px; grid-template-rows: 1fr 280px;
+        gap: 20px; padding: 70px 20px 20px 20px; height: 100vh; width: 100vw;
+      }
 
-        .controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 50px; backdrop-filter: blur(10px); z-index: 11;}
-        .controls button { padding: 10px 20px; border-radius: 50px; border: none; cursor: pointer; background: rgba(255,255,255,0.2); color: white; transition: 0.3s; white-space: nowrap;}
-        .controls button.active { background: var(--primary-color); }
-        .controls button.btn-danger.active { background: var(--danger-color); }
+      #taskCard { grid-column: 1; grid-row: 1; overflow-y: auto; }
+      #timerSettingsCard { grid-column: 1; grid-row: 2; height: max-content; }
+      #videoCard { grid-column: 2; grid-row: 1; position: relative; padding: 15px; background: rgba(0, 0, 0, 0.4); border-color: transparent; }
+      [data-theme="minimal"] #videoCard { background: #111827; }
 
-        /* ====== 底部功能区 ====== */
-        .bottom-panels { display: flex; height: 350px; border-top: 1px solid var(--border-color); background: var(--panel-bg); z-index: 5;}
-        .panel { flex: 1; padding: 15px 20px; border-right: 1px solid var(--border-color); overflow-y: auto; display: flex; flex-direction: column; }
-        .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color); }
-        .panel h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        
-        .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
-        input[type="text"], input[type="number"] { flex: 1; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px; }
-        button.styled-btn { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; background: var(--primary-color); color: white; }
-        button.styled-btn.secondary { background: #f5f5f5; color: var(--text-main); border: 1px solid #d9d9d9; }
-        button.styled-btn.danger { background: #fff1f0; color: var(--danger-color); border: 1px solid #ffccc7; }
-        button:disabled { opacity: 0.5; cursor: not-allowed !important; }
+      #timerDisplayCard { grid-column: 2; grid-row: 2; display: flex; flex-direction: row; gap: 20px; padding: 25px; }
+      #chatCard { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; overflow: hidden; }
+      #taskCard, #timerSettingsCard { transform: translateY(-33px); transition: transform 0.2s ease; z-index: 5; }
 
-        #listsContainer { flex: 1; overflow-y: auto; }
-        .task-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed var(--border-color); }
-        .task-item.completed span { text-decoration: line-through; color: var(--text-secondary); }
+      .top-center-controls { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; z-index: 20; }
+      .top-center-controls button {
+        padding: 10px 16px; border-radius: var(--radius-lg); border: var(--top-btn-border);
+        cursor: pointer; background: var(--top-btn-bg); color: var(--top-btn-color); font-weight: 500; font-size: 13px;
+        box-shadow: var(--card-shadow); backdrop-filter: var(--card-backdrop); transition: 0.3s;
+      }
+      .top-center-controls button:hover { background: #fff; color: var(--text-main); transform: translateY(-2px); }
+      .top-center-controls button.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+      .top-center-controls button.btn-danger.active { background: var(--danger-color); color: #fff; border-color: var(--danger-color); }
 
-        .timer-display { font-size: 48px; font-weight: 700; color: var(--primary-color); margin: 10px 0; text-align: center; font-variant-numeric: tabular-nums;}
-        .timer-status-bar { width: 100%; text-align: center; padding: 6px; border-radius: 4px; background: #f5f5f5; margin-bottom: 15px; font-size: 13px; transition: 0.3s;}
-        .timer-settings { background: #fafafa; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        
-        .chat-messages { flex: 1; overflow-y: auto; border: 1px solid var(--border-color); padding: 12px; margin-bottom: 10px; border-radius: 8px; background: #fafafa; display: flex; flex-direction: column; gap: 10px;}
-        .message { font-size: 14px; padding: 8px 12px; border-radius: 8px; background: white; border: 1px solid var(--border-color); align-self: flex-start; max-width: 90%; word-wrap: break-word;}
-        .message.self { align-self: flex-end; background: var(--primary-color); color: white; border-color: var(--primary-color); }
-        .message .msg-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;}
-        .message.self .msg-meta { color: rgba(255,255,255,0.8); text-align: right;}
-        .message img { max-width: 100%; border-radius: 8px; margin-top: 5px; max-height: 200px; object-fit: contain; cursor: pointer;}
-        
-        .user-list { font-size: 12px; margin-bottom: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
-        .user-tag { background: #e6f7ff; color: #1890ff; padding: 2px 8px; border-radius: 12px; border: 1px solid #91d5ff; cursor: pointer;}
+      .top-bar { position: absolute; top: 20px; right: 20px; z-index: 20; display: flex; gap: 12px; }
+      .stat-badge {
+        background: var(--top-btn-bg); backdrop-filter: var(--card-backdrop); color: var(--text-main);
+        padding: 8px 16px; border-radius: var(--radius-lg); font-size: 13px; font-weight: 500;
+        border: var(--top-btn-border); display: flex; align-items: center; gap: 8px; box-shadow: var(--card-shadow); cursor: pointer;
+      }
+      .host-badge { background: var(--warning-color); color: #fff; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; margin-left: 6px; }
+
+      .video-grid { display: flex; gap: 15px; width: 100%; height: 100%; justify-content: center; align-items: stretch; }
+      .video-box {
+        background: var(--video-box-bg); border-radius: var(--radius-sm); overflow: hidden; position: relative;
+        cursor: pointer; border: var(--video-border); transition: all 0.3s ease; display: flex; flex-direction: column; box-shadow: var(--shadow-md);
+      }
+      .video-box:hover { border: var(--video-hover-border); transform: translateY(-2px); }
+      .video-box video { width: 100%; height: 100%; object-fit: contain; flex: 1; }
+
+      .video-label {
+        position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(0, 0, 0, 0.6);
+        color: white; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; display: flex;
+        justify-content: space-between; align-items: flex-end; backdrop-filter: blur(4px);
+      }
+      .video-info-text { display: flex; flex-direction: column; gap: 4px; }
+      .vol-slider { width: 60px; accent-color: var(--primary-color); cursor: pointer; }
+      .video-box.large, .video-box.default-main { flex: 1; min-width: 0; height: 100%; }
+      .video-sidebar { width: 25%; max-width: 280px; min-width: 160px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 5px; }
+      .video-sidebar .video-box { width: 100%; height: auto; aspect-ratio: 16/9; flex-shrink: 0; }
+      .video-sidebar.empty { display: none; }
+
+      .panel-header h3 { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+      .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+      input[type="text"], input[type="number"] {
+        flex: 1; padding: 10px 14px; border: var(--input-border); border-radius: var(--radius-sm);
+        background: var(--input-bg); outline: none; transition: 0.2s; color: var(--text-main);
+      }
+      input:focus { background: var(--input-focus-bg); border-color: var(--input-focus-border); box-shadow: var(--input-focus-shadow); }
+
+      button.styled-btn {
+        padding: 10px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer;
+        background: var(--btn-primary-bg); color: white; font-weight: 500; transition: 0.2s;
+      }
+      button.styled-btn:hover { box-shadow: var(--btn-hover-shadow); transform: var(--btn-hover-transform); opacity: 0.9; }
+      button.styled-btn.secondary { background: var(--btn-sec-bg); color: var(--btn-sec-color); border: var(--btn-sec-border); }
+      button.styled-btn.secondary:hover { background: var(--btn-sec-hover-bg); }
+      button.styled-btn.danger { background: var(--btn-danger-bg); }
+
+      #listsContainer { flex: 1; overflow-y: auto; }
+      .task-item {
+        display: flex; align-items: center; justify-content: space-between; padding: 10px;
+        background: var(--item-bg); border-radius: var(--radius-sm); margin-bottom: 8px; transition: 0.2s; border: var(--item-border-base); font-size: 14px;
+      }
+      .task-item:hover { background: var(--item-hover-bg); transform: var(--item-hover-transform); border: var(--item-hover-border); }
+      .task-item.completed span { text-decoration: line-through; color: var(--text-secondary); opacity: 0.6; }
+
+      .timer-main-area { flex: 0.9; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: var(--divider-dashed); padding-right: 20px; }
+      .timer-stats-area { flex: 1.1; display: flex; flex-direction: column; gap: 15px; overflow: hidden; padding-left: 10px; }
+
+      .timer-display { font-size: 72px; font-weight: bold; color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1; margin: 15px 0; letter-spacing: 2px; }
+      .timer-status-bar { padding: 6px 16px; border-radius: var(--radius-lg); background: var(--timer-status-bg); font-weight: 500; font-size: 13px; color: var(--text-secondary); border: var(--divider-solid); }
+
+      .stats-overview { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat-box { background: var(--stat-box-bg); padding: 12px 15px; border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 5px; border: var(--item-border-base); }
+      .stat-label { font-size: 12px; color: var(--text-secondary); }
+      .stat-val { font-size: 24px; font-weight: bold; color: var(--text-main); line-height: 1; }
+
+      .focus-timeline-container { flex: 1; overflow-y: auto; padding-left: 8px; margin-top: 5px; }
+      .timeline-item { position: relative; padding-left: 20px; padding-bottom: 20px; border-left: 2px solid var(--primary-light); }
+      .timeline-item:last-child { border-left-color: transparent; }
+      .timeline-item::before {
+        content: ""; position: absolute; left: -6px; top: 0; width: 10px; height: 10px;
+        border-radius: 50%; background: var(--primary-color); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--primary-light);
+      }
+      [data-theme="minimal"] .timeline-item { padding-left: 16px; border-left: 1px solid var(--border-color); }
+      [data-theme="minimal"] .timeline-item::before { left: -4px; top: 4px; width: 7px; height: 7px; border: none; box-shadow: none; }
+      .timeline-time { font-size: 12px; color: var(--text-tertiary); display: flex; justify-content: space-between; margin-bottom: 4px; }
+      .timeline-task { font-size: 14px; font-weight: 500; color: var(--text-main); }
+
+      .timer-settings { display: flex; flex-direction: column; gap: 12px; }
+      .audio-upload { margin-top: 10px; padding-top: 10px; border-top: var(--divider-dashed); }
+      .audio-upload input[type="file"] { font-size: 12px; width: 100%; margin-top: 5px; color: var(--text-secondary); }
+
+      .user-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 0; opacity: 0; margin-bottom: 0; padding-bottom: 0; border-bottom: 0px solid transparent; transition: all 0.4s ease; }
+      .user-list.show { max-height: 40%; opacity: 1; margin-bottom: 10px; padding-bottom: 10px; border-bottom: var(--divider-dashed); }
+      .user-list-item { background: var(--item-bg); padding: 8px 12px; border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 4px; border: var(--input-border); transition: 0.2s; flex-shrink: 0; }
+      .user-list-item:hover { background: var(--item-hover-bg); }
+      .user-list-name { font-size: 13px; font-weight: 600; color: var(--text-main); }
+      .user-list-status { font-size: 11px; color: var(--text-secondary); }
+
+      .chat-messages { flex: 1; overflow-y: auto; padding: 10px 5px; display: flex; flex-direction: column; gap: 12px; }
+      .message { font-size: 13px; padding: 12px; border-radius: 12px 12px 12px 0; background: var(--msg-other-bg); border: var(--msg-other-border); color: var(--msg-other-color); align-self: flex-start; max-width: 85%; word-wrap: break-word; user-select: none; }
+      .message.self { align-self: flex-end; background: var(--msg-self-bg); color: var(--msg-self-color); border-radius: 12px 12px 0 12px; border: none; }
+      .message .msg-meta { font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px; }
+      .message.self .msg-meta { color: rgba(255, 255, 255, 0.7); text-align: right; }
+      .message img { max-width: 100%; border-radius: 8px; margin-top: 8px; cursor: pointer; }
+      .nudge-msg { text-align: center; font-size: 12px; color: #888; margin: 4px 0; background: none; box-shadow: none; border: none; align-self: center; padding: 0; }
+
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 10px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.3); }
+      [data-theme="minimal"] ::-webkit-scrollbar-thumb { background: #d1d5db; }
+      [data-theme="minimal"] ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+      /* ================= MD 文件卡片与高级预览样式 ================= */
+      .md-card {
+        background: rgba(0, 0, 0, 0.05); border: 1px solid var(--border-color, rgba(0,0,0,0.1)); padding: 8px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer; position: relative; text-decoration: none; margin-top: 4px;
+      }
+      [data-theme="minimal"] .md-card { background: #f3f4f6; border: 1px solid #e5e7eb; }
+      .md-card:hover { background: rgba(0, 0, 0, 0.08); }
+      .md-card:hover .md-preview { display: block; }
+      
+      .md-preview {
+        display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: 280px; max-height: 250px; overflow-y: auto; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #eaeaea); padding: 15px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); font-size: 13px; color: var(--text-main, #333); z-index: 100; text-align: left; cursor: default;
+      }
+      .md-preview::before { content: ''; position: absolute; top: 100%; left: 0; width: 100%; height: 15px; background: transparent; }
+      .md-preview::after {
+        content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: var(--card-bg, #fff) transparent transparent transparent;
+      }
+      .md-preview h1 { font-size: 1.5em; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 4px; color: #000; }
+      .md-preview h2 { font-size: 1.3em; margin-bottom: 8px; color: #111; }
+      .md-preview h3 { font-size: 1.1em; margin-bottom: 6px; color: #222; }
+      .md-preview p { margin-bottom: 8px; line-height: 1.5; }
+      .md-preview ul, .md-preview ol { padding-left: 20px; margin-bottom: 8px; }
+      .md-preview code { background: rgba(0,0,0,0.06); padding: 2px 5px; border-radius: 4px; font-family: monospace; color: #d63384; }
+      .md-preview pre code { display: block; padding: 10px; overflow-x: auto; color: #333; }
+      .md-preview blockquote { border-left: 4px solid #ccc; padding-left: 10px; color: #666; margin: 0 0 10px 0; }
     </style>
-</head>
-<body>
+  </head>
+  <body>
+    
+    <div class="top-center-controls">
+      <button id="btnMic" onclick="toggleMic()" >🎤 开启麦克风</button>
+      <button id="btnCam" onclick="toggleCam()" >📷 开启摄像头</button>
+      <button id="btnScreen" onclick="toggleScreenShare()" class="btn-danger" >💻 共享屏幕</button>
+      
+      <button onclick="toggleTheme()" title="切换主题样式">🌗 切换主题</button>
+      <button class="styled-btn secondary" onclick="window.location.href = '/index.html'">🚪 返回大厅</button>
+    </div>
 
     <div class="top-bar">
-        <div class="stat-badge edit-name-btn" onclick="editNickname()" title="点击修改昵称">
-            <span id="myNameDisplay">加载中...</span> ✏️
-        </div>
-        <div class="stat-badge" id="hostStatusBadge" style="display:none; background: #faad14;">👑 主持人</div>
-        <div class="stat-badge">👥 在线人数: <span id="userCountDisplay">1</span></div>
+      <div class="stat-badge" onclick="openMemos()" style="cursor: pointer;" title="打开 Memos 笔记">📝 Memos</div>
+      <div class="stat-badge edit-name-btn" onclick="editNickname()" title="点击修改昵称"><span id="myNameDisplay">加载中...</span> ✏️</div>
+      <div class="stat-badge" id="hostStatusBadge" style="background: #f6d365; color: #fff; border: none; display:none;">👑 房主</div>
+      <div class="stat-badge" onclick="toggleUserList()" style="cursor: pointer; user-select: none; " title="点击展开/收起成员列表">👥 在线: <span id="userCountDisplay">1</span></div>
     </div>
 
-    <div class="video-container">
+    <div class="app-layout">
+      <div class="glass-card" id="taskCard">
+        <div class="panel-header"><h3>📋 任务清单</h3></div>
+        <div class="input-group">
+          <input type="text" id="newListInput" placeholder="输入清单名称..." />
+          <button class="styled-btn" onclick="createList()">新建</button>
+        </div>
+        <div id="listsContainer"></div>
+      </div>
+
+      <div class="glass-card" id="timerSettingsCard">
+        <div class="panel-header" style="margin-bottom: 10px"><h3>⚙️ 计时设置</h3></div>
+        <div class="timer-settings">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13px; font-weight: 500">专注(分): <input type="number" id="focusTime" value="40" style="width: 60px; padding: 5px; text-align: center" /></span>
+            <span style="font-size: 13px; font-weight: 500">休息(分): <input type="number" id="breakTime" value="5" style="width: 60px; padding: 5px; text-align: center" /></span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px;">
+            <button class="styled-btn" onclick="startPomodoro()">番茄钟</button>
+            <button class="styled-btn secondary" onclick="startStopwatch()">正计时</button>
+            <button class="styled-btn" id="btnPause" onclick="togglePauseTimer()" style="display: none; background: var(--warning-color); color: #000">暂停</button>
+            <button class="styled-btn danger" onclick="stopTimer()">结束</button>
+          </div>
+          <div class="audio-upload">
+            <label style="font-size: 11px; font-weight: 500; color: var(--text-secondary);">🎵 自定义音效 (MP3, &lt;10MB)</label>
+            <input type="file" id="alarmSound" accept=".mp3,audio/mpeg" onchange="handleAudioUpload(event)" />
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card" id="videoCard">
         <div class="video-grid" id="videoGrid">
-            <div class="video-box default-main" id="localVideoBox" onclick="togglePin('localVideoBox')">
-                <video id="localVideo" autoplay muted playsinline></video>
-                <div class="video-label"><span>我 (未开启)</span></div>
+          <div class="video-box default-main" id="localVideoBox" onclick="togglePin('localVideoBox')">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <div class="video-label">
+              <div class="video-info-text">
+                <div style="font-weight: bold; font-size: 14px; margin-bottom: 2px">我</div>
+                <div style="font-size: 12px; color: #e2e8f0" id="localVideoStatus">未开启</div>
+              </div>
             </div>
+          </div>
         </div>
-        
-        <div class="controls">
-            <button id="btnMic" onclick="toggleMic()">🎤 开启麦克风</button>
-            <button id="btnCam" onclick="toggleCam()">📷 开启摄像头</button>
-            <button id="btnScreen" onclick="toggleScreenShare()" class="btn-danger">💻 共享屏幕</button>
-        </div>
-    </div>
+      </div>
 
-    <div class="bottom-panels">
-        <div class="panel" id="taskPanel">
-            <div class="panel-header"><h3>📋 任务清单</h3></div>
-            <div class="input-group">
-                <input type="text" id="newListInput" placeholder="输入清单名称...">
-                <button class="styled-btn" onclick="createList()">新建</button>
-            </div>
-            <div id="listsContainer"></div>
+      <div class="glass-card" id="timerDisplayCard">
+        <div class="timer-main-area">
+          <div id="currentTaskDisplay" style="font-size: 14px; font-weight: 500; color: var(--text-secondary);">专注：暂无任务</div>
+          <div class="timer-display" id="timeDisplay">40:00</div>
+          <div class="timer-status-bar" id="timerStatus">准备就绪</div>
         </div>
 
-        <div class="panel" id="timerPanel">
-            <div class="panel-header"><h3>⏱️ 专注计时</h3></div>
-            <div class="timer-display" id="timeDisplay">25:00</div>
-            <div class="timer-status-bar" id="timerStatus">准备就绪</div>
-            
-            <div class="timer-settings">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="font-size: 14px;">专注(分): <input type="number" id="focusTime" value="25" style="width:100px; text-align:center;"></span>
-                    <span style="font-size: 14px;">休息(分): <input type="number" id="breakTime" value="5" style="width:100px; text-align:center;"></span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <button class="styled-btn" onclick="startPomodoro()">番茄钟</button>
-                    <button class="styled-btn secondary" onclick="startStopwatch()">正计时</button>
-                    <button class="styled-btn" id="btnPause" onclick="togglePauseTimer()" style="display:none; background:#faad14;">暂停</button>
-                    <button class="styled-btn danger" onclick="stopTimer()">停止</button>
-                </div>
+        <div class="timer-stats-area">
+          <div class="stats-overview">
+            <div class="stat-box">
+              <div class="stat-label">今日番茄</div>
+              <div class="stat-val" id="statPomodoros">0</div>
             </div>
+            <div class="stat-box">
+              <div class="stat-label">今日时长</div>
+              <div class="stat-val" id="statFocusTime">0 m</div>
+            </div>
+          </div>
+          <div style="font-weight: 500; font-size: 14px; margin-top: 5px; color: var(--text-main);">专注记录</div>
+          <div class="focus-timeline-container" id="timelineContainer"></div>
         </div>
+      </div>
 
-        <div class="panel" id="reflectionPanel">
-            <div class="panel-header">
-                <h3>💬 聊天室</h3>
-                <button id="hostChatToggleBtn" class="styled-btn danger" style="display:none; padding: 4px 8px; font-size: 12px;" onclick="toggleRoomChat()">禁言全员</button>
-            </div>
-            <div class="user-list" id="userListContainer"></div>
-            <div class="chat-messages" id="chatBox"></div>
-            
-            <div class="input-group">
-                <input type="file" id="imageInput" accept="image/png, image/jpeg, image/gif" style="display: none;" onchange="handleImageUpload(event)">
-                <button class="styled-btn secondary" onclick="document.getElementById('imageInput').click()" title="发送图片/GIF">🖼️</button>
-                <input type="text" id="reflectionInput" placeholder="发送消息...">
-                <button class="styled-btn" id="btnSendChat" onclick="sendReflection()">发送</button>
-            </div>
+      <div class="glass-card" id="chatCard">
+        <div class="panel-header">
+          <h3>💬 互动区</h3>
+          <button id="hostChatToggleBtn" class="styled-btn danger" style="display: none; padding: 4px 8px; font-size: 11px" onclick="toggleRoomChat()">禁言全员</button>
         </div>
+        <div class="user-list" id="userListContainer"></div>
+        <div class="chat-messages" id="chatBox"></div>
+
+        <div class="input-group" style="margin-bottom: 0; margin-top: 10px">
+          <input type="file" id="imageInput" accept="image/png, image/jpeg, image/gif" style="display: none" onchange="handleImageUpload(event)" />
+          <input type="file" id="mdInput" accept=".md" style="display: none" onchange="handleMdUpload(event)" />
+          <button class="styled-btn secondary" onclick="document.getElementById('imageInput').click()" title="发送图片">🖼️</button>
+          <button class="styled-btn secondary" onclick="document.getElementById('mdInput').click()" title="发送Markdown">📄</button>
+          <input type="text" id="reflectionInput" placeholder="发送消息(回车发送)..." onkeypress="if (event.key === 'Enter') sendReflection();" />
+          <button class="styled-btn" id="btnSendChat" onclick="sendReflection()">发送</button>
+        </div>
+      </div>
     </div>
 
     <script>
-        const ROOM_ID = 'default_study_room';
-        let socket;
-        let myUserId;
-        let isHost = false;
-        let roomUsers = [];
-        let roomDataFromServer = { names: {}, timers: {} };
+      // ================= 主题切换逻辑 =================
+      function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute("data-theme");
+        const newTheme = currentTheme === "minimal" ? "glass" : "minimal";
+        if (newTheme === "minimal") {
+          document.documentElement.setAttribute("data-theme", "minimal");
+        } else {
+          document.documentElement.removeAttribute("data-theme");
+        }
+        localStorage.setItem("study_theme", newTheme);
+        renderTasks(); 
+      }
 
-        let myNickname = localStorage.getItem('study_nickname') || '同学';
+      // ================= 基础变量初始化 =================
+      const urlParams = new URLSearchParams(window.location.search);
+      const ROOM_ID = urlParams.get("room") || "default_study_room";
 
-        let currentMainId = 'localVideoBox';
-        let isLargeMode = false;
-        let currentFocusTask = ''; 
+      let socket;
+      let myUserId;
+      let isHost = false;
+      let roomUsers = [];
+      let roomDataFromServer = { names: {}, timers: {}, dbIds: {} };
+      let myNickname = localStorage.getItem("study_nickname") || "同学";
+      let currentMainId = "localVideoBox";
+      let isLargeMode = false;
+      let currentFocusTask = "";
 
-        // WebRTC 核心状态
-        let peerConnections = {}; 
-        let localStream = null;      // 关键：永远保存当前需要发给别人的所有流集合
-        let cameraTrack = null; 
-        let micAudioTrack = null;
-        let screenAudioTrack = null; 
-        
-        let isCamOpen = false;
-        let isMicOpen = false;
-        let isSharingScreen = false; 
+      let totalPomodoros = 0;
+      let totalFocusMinutes = 0;
+      let sessionAccumulatedSecs = 0;
+      let recordTaskName = "";
+      let isCurrentPomodoro = false;
 
-        // ====== 解决浏览器自动拦截音频的问题 ======
-        document.body.addEventListener('click', () => {
-            document.querySelectorAll('audio, video').forEach(media => {
-                if (media.paused && media.srcObject) media.play().catch(e => {});
-            });
-        }, { once: true });
+      let nudgeCooldowns = {};
+      let alarmAudio = new Audio();
 
-        // ====== 解决切后台画面/声音卡死问题 ======
-        document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-                document.querySelectorAll('video, audio').forEach(media => {
-                    if (media.paused && media.srcObject) media.play().catch(e => {});
-                });
-                setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
+      let isUserListVisible = false;
+      function toggleUserList() {
+        isUserListVisible = !isUserListVisible;
+        const container = document.getElementById("userListContainer");
+        isUserListVisible ? container.classList.add("show") : container.classList.remove("show");
+      }
+
+      // 云端获取自定义音效
+      async function fetchCustomAudio() {
+        const token = localStorage.getItem("study_token");
+        if (!token) return;
+        try {
+            const res = await fetch('/api/user/audio', { headers: { Authorization: `Bearer ${token}` } });
+            const data = await res.json();
+            if (data.audio_data) {
+                alarmAudio.src = data.audio_data;
             }
+        } catch (e) {}
+      }
+      
+      const MEMOS_URL = 'https://memos.letusstudytogether.online';
+
+      function openMemos() {
+        window.open(MEMOS_URL, '_blank', 'noopener,noreferrer');
+      }
+
+      function handleAudioUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) {
+          alert("文件过大！请限制在 10MB 内。");
+          event.target.value = "";
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const base64Audio = e.target.result;
+            alarmAudio.src = base64Audio;
+            alert("自定义音效设置成功！正在为您保存到云端...");
+            
+            const token = localStorage.getItem("study_token");
+            try {
+                await fetch('/api/user/audio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ audio_data: base64Audio })
+                });
+            } catch(err) { console.error('音效保存失败', err); }
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function playAlarmSound() {
+        if (alarmAudio.src) {
+          alarmAudio.play().catch((e) => {});
+        } else {
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(600, ctx.currentTime);
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+            osc.start();
+            osc.stop(ctx.currentTime + 1.5);
+          } catch (e) {}
+        }
+      }
+
+      document.body.addEventListener("click", () => {
+          document.querySelectorAll("audio, video").forEach((m) => {
+            if (m.paused && m.srcObject) m.play().catch((e) => {});
+          });
+        }, { once: true }
+      );
+
+      // ====== 解决切后台画面/声音卡死问题 ======
+      document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") {
+              document.querySelectorAll('video, audio').forEach(media => {
+                  if (media.paused && media.srcObject) media.play().catch(e => {});
+              });
+              setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 100);
+          }
+      });
+
+      window.onload = () => {
+        document.title = `自习室: ${ROOM_ID}`;
+        fetchCustomAudio(); 
+        initSocket();
+        renderTasks();
+        arrangeLayout(currentMainId, isLargeMode);
+        restoreStateOnLoad();
+      };
+
+      window.addEventListener('beforeunload', () => {
+          if (socket) {
+              socket.disconnect(); 
+          }
+      });
+
+      // ================= Socket 与 API =================
+      function initSocket() {
+        const token = localStorage.getItem("study_token");
+        if (!token) {
+            alert("未检测到登录凭证，请先登录！");
+            window.location.href = "/index.html";
+            return;
+        }
+
+        socket = io({ auth: { token: token } });
+
+        socket.on("connect_error", (err) => {
+          console.error("Socket 连接失败:", err.message);
+          if (err.message.includes("授权") || err.message.includes("Token")) {
+            alert("登录已失效: " + err.message);
+            localStorage.removeItem("study_token");
+            window.location.href = "/index.html";
+          }
         });
 
-        window.onload = () => { 
-            initSocket(); 
-            createList('今日目标'); 
-            arrangeLayout(currentMainId, isLargeMode); 
-        };
+        socket.on("connect", () => {
+          myUserId = socket.id;
+          socket.emit("join_room", ROOM_ID);
+        });
 
-        function initSocket() {
-            socket = io();
+        socket.on("room_update", (data) => {
+          roomDataFromServer = data;
+          roomUsers = data.users;
+          document.getElementById("userCountDisplay").innerText = roomUsers.length;
+          
+          if (roomDataFromServer.names[myUserId]) {
+              myNickname = roomDataFromServer.names[myUserId];
+              document.getElementById('myNameDisplay').innerText = myNickname;
+          }
 
-            socket.on('connect', () => {
-                myUserId = socket.id;
-                document.getElementById('myNameDisplay').innerText = myNickname;
-                socket.emit('join_room', ROOM_ID);
-                socket.emit('update_name', myNickname); 
+          isHost = data.host === myUserId;
+          document.getElementById("hostStatusBadge").style.display = isHost ? "inline-block" : "none";
+          document.getElementById("hostChatToggleBtn").style.display = isHost ? "block" : "none";
+
+          renderUserList(data.host);
+          updateAllVideoLabels();
+
+          const chatInput = document.getElementById("reflectionInput");
+          const chatBtn = document.getElementById("btnSendChat");
+          const imgBtn = document.querySelector('button[onclick="document.getElementById(\'imageInput\').click()"]');
+          const toggleBtn = document.getElementById('hostChatToggleBtn');
+          
+          if (!data.chatEnabled && !isHost) {
+            chatInput.disabled = true; chatBtn.disabled = true; imgBtn.disabled = true;
+            chatInput.placeholder = "全员禁言中";
+          } else {
+            chatInput.disabled = false; chatBtn.disabled = false; imgBtn.disabled = false;
+            chatInput.placeholder = "发送消息(回车发送)...";
+          }
+
+          if (isHost) {
+              toggleBtn.innerText = data.chatEnabled ? "禁言全员" : "解除禁言";
+              toggleBtn.className = data.chatEnabled ? "styled-btn danger" : "styled-btn";
+          }
+        });
+
+        socket.on("chat_message", (msgData) => {
+          if (msgData.isNudge) {
+            appendNudgeMessage(msgData.message);
+          } else {
+            appendMessage(msgData.userName, msgData.message, msgData.time, false, msgData.isImage, msgData.isMd, msgData.fileName);
+          }
+        });
+
+        socket.on('user_joined', async (newUserId) => {
+            const pc = createPeerConnection(newUserId);
+            if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('offer', { target: newUserId, caller: myUserId, sdp: offer });
+        });
+
+        socket.on('offer', async (data) => {
+            const pc = createPeerConnection(data.caller);
+            await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            if (localStream) localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit('answer', { target: data.caller, serval: myUserId, sdp: answer });
+        });
+
+        socket.on('answer', async (data) => {
+            const pc = peerConnections[data.serval];
+            if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        });
+
+        socket.on('ice-candidate', async (data) => {
+            const pc = peerConnections[data.from];
+            if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        });
+
+        socket.on("user_left", (userId) => {
+          closePeerConnection(userId);
+        });
+      }
+
+      async function editNickname() {
+          const newName = prompt("请输入新昵称 (2-15个字符)：", myNickname);
+          if (newName && newName.trim().length >= 2 && newName.trim().length <= 15) {
+              const token = localStorage.getItem("study_token");
+              try {
+                  const res = await fetch('/api/user/nickname', {
+                      method: 'PUT',
+                      headers: { 
+                          'Content-Type': 'application/json', 
+                          Authorization: `Bearer ${token}` 
+                      },
+                      body: JSON.stringify({ nickname: newName.trim() })
+                  });
+                  
+                  if (res.ok) {
+                      myNickname = newName.trim();
+                      localStorage.setItem('study_nickname', myNickname);
+                      document.getElementById('myNameDisplay').innerText = myNickname;
+                      alert("修改成功！由于使用了高安全性的 JWT Token，名字已在数据库更新，重新登录或刷新进房即可向所有人展示新名字。");
+                  } else {
+                      const err = await res.json();
+                      alert(err.error || "修改失败");
+                  }
+              } catch (e) {
+                  alert("网络错误，无法连接到服务器");
+              }
+          } else if (newName !== null) {
+              alert("昵称长度需在 2 到 15 个字符之间！");
+          }
+      }
+
+      function viewProfile(socketId) {
+          if (!roomDataFromServer.dbIds) {
+              alert('服务端尚未同步用户数据，请确保已替换 server.js 并且重启了后端服务器！');
+              return;
+          }
+          
+          const dbId = roomDataFromServer.dbIds[socketId];
+          if (dbId) {
+              window.location.href = `/profile.html?id=${dbId}&fromRoom=${ROOM_ID}`;
+          } else {
+              alert('无法获取该用户信息');
+          }
+      }
+
+      function renderUserList(hostId) {
+        const container = document.getElementById("userListContainer");
+        container.innerHTML = "";
+        const sortedUsers = [...roomUsers].sort((a, b) => {
+          if (a === myUserId) return -1;
+          if (b === myUserId) return 1;
+          return 0;
+        });
+        sortedUsers.forEach((id) => {
+          const item = document.createElement("div");
+          item.className = "user-list-item";
+          if (id === myUserId) item.style.borderLeft = "4px solid var(--primary-color)";
+          
+          item.style.cursor = "pointer";
+          item.title = "点击查看资料";
+          item.onclick = () => viewProfile(id);
+
+          item.innerHTML = `
+              <div class="user-list-name" id="list_name_${id}">加载中...</div>
+              <div class="user-list-status" id="list_status_${id}">加载中...</div>
+          `;
+          container.appendChild(item);
+        });
+        updateAllVideoLabels();
+      }
+
+      function toggleRoomChat() {
+          const btn = document.getElementById('hostChatToggleBtn');
+          const isCurrentlyEnabled = btn.innerText === "禁言全员";
+          socket.emit('toggle_chat', !isCurrentlyEnabled);
+      }
+
+      function updateAllVideoLabels() {
+        roomUsers.forEach((id) => {
+          const isMe = id === myUserId;
+          const customName = isMe ? myNickname : roomDataFromServer.names[id] || `成员(${id.substring(0, 4)})`;
+          const isPomodoro = document.getElementById("timerStatus").innerText.includes("专注") || document.getElementById("timerStatus").innerText.includes("休息");
+          const timerStatus = isMe ? getTimerStatusString(isPomodoro) : roomDataFromServer.timers[id] || "暂无任务";
+
+          const labelContainer = isMe ? document.querySelector("#localVideoBox .video-info-text") : document.querySelector(`#box_${id} .video-info-text`);
+          if (labelContainer)
+            labelContainer.innerHTML = `<div style="font-weight:bold; font-size:13px; margin-bottom:2px;">${customName}</div><div style="font-size:11px; color:#e2e8f0;">${timerStatus}</div>`;
+
+          const listItemName = document.getElementById(`list_name_${id}`);
+          const listItemStatus = document.getElementById(`list_status_${id}`);
+          if (listItemName && listItemStatus) {
+            listItemName.innerHTML = `${isMe ? `${customName} (我)` : customName}${id === roomDataFromServer.host ? " 👑" : ""}`;
+            listItemStatus.innerHTML = timerStatus;
+          }
+        });
+      }
+
+      // ================= WebRTC 核心架构 (保留原生 screenshare-good 版本逻辑) =================
+      let peerConnections = {}; 
+      let localStream = null;      
+      let cameraTrack = null; 
+      let micAudioTrack = null;
+      let screenAudioTrack = null; 
+      let isCamOpen = false;
+      let isMicOpen = false;
+      let isSharingScreen = false; 
+
+      const rtcConfig = { 
+          iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' }
+          ] 
+      };
+
+      function createPeerConnection(remoteUserId) {
+          if (peerConnections[remoteUserId]) return peerConnections[remoteUserId];
+          const pc = new RTCPeerConnection(rtcConfig);
+          peerConnections[remoteUserId] = pc;
+          
+          let isNegotiating = false;
+          pc.onsignalingstatechange = () => { isNegotiating = (pc.signalingState !== "stable"); };
+
+          pc.onicecandidate = (event) => {
+              if (event.candidate) socket.emit('ice-candidate', { target: remoteUserId, from: myUserId, candidate: event.candidate });
+          };
+
+          pc.onnegotiationneeded = async () => {
+              if (isNegotiating) return;
+              isNegotiating = true;
+              try {
+                  const offer = await pc.createOffer();
+                  await pc.setLocalDescription(offer);
+                  socket.emit('offer', { target: remoteUserId, caller: myUserId, sdp: pc.localDescription });
+              } catch (e) { console.error('协商失败', e); } finally {
+                  isNegotiating = false;
+              }
+          };
+
+          pc.ontrack = (event) => {
+              if (event.track.kind === 'audio') {
+                  let audioEl = document.getElementById(`audio_${event.track.id}`);
+                  if (!audioEl) {
+                      audioEl = document.createElement('audio');
+                      audioEl.id = `audio_${event.track.id}`;
+                      audioEl.autoplay = true;
+                      audioEl.srcObject = new MediaStream([event.track]);
+                      document.body.appendChild(audioEl);
+                      event.track.onended = () => { if (audioEl) audioEl.remove(); };
+                  }
+              }
+
+              let remoteVideoE = document.getElementById(`video_${remoteUserId}`);
+              if (!remoteVideoE) {
+                  const html = `<div class="video-box" id="box_${remoteUserId}" onclick="togglePin('box_${remoteUserId}')">
+                      <video id="video_${remoteUserId}" autoplay playsinline muted></video>
+                      <div class="video-label"><div class="video-info-text">加载中...</div></div>
+                  </div>`;
+                  document.getElementById('videoGrid').insertAdjacentHTML('beforeend', html);
+                  remoteVideoE = document.getElementById(`video_${remoteUserId}`);
+              }
+
+              if (remoteVideoE.srcObject !== event.streams[0]) {
+                  remoteVideoE.srcObject = event.streams[0];
+              }
+              
+              updateAllVideoLabels();
+              setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
+          };
+          return pc;
+      }
+
+      function closePeerConnection(userId) {
+          if (peerConnections[userId]) { peerConnections[userId].close(); delete peerConnections[userId]; }
+          const box = document.getElementById(`box_${userId}`);
+          if (box) box.remove();
+          setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
+      }
+
+      function updateTrackStatus(newTrack, trackType, isSystemAudio = false) {
+          if (!localStream) localStream = new MediaStream();
+          
+          const oldTracks = localStream.getTracks().filter(t => {
+              if (t.kind !== trackType) return false;
+              if (trackType === 'audio') return isSystemAudio ? t === screenAudioTrack : t === micAudioTrack;
+              return true; 
+          });
+          oldTracks.forEach(t => localStream.removeTrack(t));
+
+          if (newTrack) localStream.addTrack(newTrack);
+
+          Object.values(peerConnections).forEach(pc => {
+              const sender = pc.getSenders().find(s => {
+                  if (!s.track) return false;
+                  if (trackType === 'audio') {
+                      return isSystemAudio ? s.track === screenAudioTrack : s.track === micAudioTrack;
+                  }
+                  return s.track.kind === trackType;
+              });
+
+              if (sender) {
+                  if (newTrack) sender.replaceTrack(newTrack);
+                  else pc.removeTrack(sender); 
+              } else if (newTrack) {
+                  pc.addTrack(newTrack, localStream);
+              }
+          });
+      }
+
+      async function toggleCam() {
+          const btn = document.getElementById('btnCam');
+          if (isSharingScreen && !isCamOpen) return alert("请先停止屏幕共享。");
+
+          if (!isCamOpen) {
+              try {
+                  const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+                  cameraTrack = stream.getVideoTracks()[0];
+                  
+                  document.getElementById('localVideo').srcObject = new MediaStream([cameraTrack]);
+                  updateTrackStatus(cameraTrack, 'video'); 
+                  
+                  isCamOpen = true;
+                  btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
+              } catch (err) { alert("无法访问摄像头: " + err.message); }
+          } else {
+              try {
+                  if (cameraTrack) {
+                      cameraTrack.enabled = false; cameraTrack.stop();
+                      updateTrackStatus(null, 'video'); 
+                  }
+              } catch(e) {}
+              isCamOpen = false;
+              btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
+              
+              const lv = document.getElementById('localVideo');
+              if (lv.srcObject) {
+                  lv.srcObject.getVideoTracks().forEach(t=>t.stop());
+                  lv.srcObject = null;
+              }
+          }
+      }
+
+      async function toggleMic() {
+          const btn = document.getElementById('btnMic');
+          
+          if (!micAudioTrack) {
+              try { 
+                  const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
+                  micAudioTrack = audioStream.getAudioTracks()[0];
+                  micAudioTrack.enabled = false; 
+              } catch(e) { 
+                  return alert("无法获取麦克风权限，请检查浏览器设置！");
+              }
+          }
+          
+          if (!isMicOpen) {
+              micAudioTrack.enabled = true;
+              updateTrackStatus(micAudioTrack, 'audio', false); 
+              isMicOpen = true;
+              btn.innerText = "🎤 关闭麦克风"; btn.classList.add('active');
+          } else {
+              micAudioTrack.enabled = false;
+              updateTrackStatus(null, 'audio', false); 
+              isMicOpen = false;
+              btn.innerText = "🎤 开启麦克风"; btn.classList.remove('active');
+          }
+      }
+
+      async function toggleScreenShare() {
+          const btn = document.getElementById('btnScreen');
+          if (isCamOpen && !isSharingScreen) await toggleCam(); 
+
+          if (!isSharingScreen) {
+              try {
+                  const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                  const screenTrack = stream.getVideoTracks()[0];
+                  screenAudioTrack = stream.getAudioTracks()[0]; 
+
+                  document.getElementById('localVideo').srcObject = new MediaStream([screenTrack]);
+                  
+                  updateTrackStatus(screenTrack, 'video'); 
+                  if (screenAudioTrack) {
+                      updateTrackStatus(screenAudioTrack, 'audio', true); 
+                  }
+
+                  isSharingScreen = true;
+                  btn.innerText = "💻 停止共享"; btn.classList.add('active');
+                  
+                  screenTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
+              } catch (err) { console.log("取消共享"); }
+          } else {
+              try {
+                  const src = document.getElementById('localVideo').srcObject;
+                  if (src && src.getVideoTracks().length) src.getVideoTracks()[0].stop();
+                  
+                  updateTrackStatus(null, 'video'); 
+                  if (screenAudioTrack) {
+                      screenAudioTrack.stop();
+                      updateTrackStatus(null, 'audio', true); 
+                      screenAudioTrack = null;
+                  }
+              } catch(e) {}
+              
+              isSharingScreen = false;
+              btn.innerText = "💻 共享屏幕"; btn.classList.remove('active');
+              document.getElementById('localVideo').srcObject = null;
+          }
+      }
+
+      function togglePin(boxId) {
+          if (currentMainId === boxId && isLargeMode) {
+              isLargeMode = false; currentMainId = 'localVideoBox';
+          } else {
+              currentMainId = boxId; isLargeMode = true;
+          }
+          arrangeLayout(currentMainId, isLargeMode);
+      }
+
+      function arrangeLayout(mainId, large) {
+          const grid = document.getElementById('videoGrid');
+          const existingBoxes = Array.from(document.querySelectorAll('.video-box'));
+          let mainBox = existingBoxes.find(b => b.id === mainId) || existingBoxes.find(b => b.id === 'localVideoBox') || existingBoxes[0] || null;
+
+          grid.innerHTML = '';
+          if (!mainBox) return;
+
+          existingBoxes.forEach(b => { 
+              b.style.display = 'flex'; 
+              b.classList.remove('large', 'default-main'); 
+          });
+
+          if (large) mainBox.classList.add('large'); 
+          else mainBox.classList.add('default-main');
+
+          grid.appendChild(mainBox);
+
+          const sidebar = document.createElement('div');
+          sidebar.className = 'video-sidebar';
+          const others = existingBoxes.filter(b => b.id !== mainBox.id);
+
+          if (others.length === 0) sidebar.classList.add('empty');
+          others.forEach(b => { sidebar.appendChild(b); });
+          grid.appendChild(sidebar);
+
+          setTimeout(() => {
+              document.querySelectorAll('.video-box video').forEach(videoEl => {
+                  if (videoEl.paused && videoEl.srcObject) videoEl.play().catch(e => {});
+              });
+          }, 100);
+      }
+
+      // ================= 计时器与自动休息 =================
+      let timerInterval;
+      let totalSeconds = 0;
+      let isTimerRunning = false;
+      let isTimerPaused = false;
+
+      function getTimerStatusString(isPomodoro) {
+        if (!isTimerRunning && !isTimerPaused)
+          return currentFocusTask ? `待专注：${currentFocusTask}` : "未开始";
+        const m = Math.floor(totalSeconds / 60);
+        const s = (totalSeconds % 60).toString().padStart(2, "0");
+        const timeStr = isPomodoro ? `剩余 ${m}:${s}` : `已计 ${m}:${s}`;
+        const taskName = currentFocusTask || (isPomodoro ? (document.getElementById("timerStatus").innerText.includes("休息") ? "休息中" : "番茄钟") : "正计时");
+        return `${taskName} | ${timeStr}${isTimerPaused ? " (暂停)" : ""}`;
+      }
+
+      function broadcastTimerStatus(isPomodoro) {
+        if (socket) socket.emit("sync_timer", getTimerStatusString(isPomodoro));
+      }
+
+      function updateDisplay(sec) {
+        document.getElementById("timeDisplay").innerText = `${Math.floor(sec / 60).toString().padStart(2, "0")}:${(sec % 60).toString().padStart(2, "0")}`;
+        const isPomodoro = document.getElementById("timerStatus").innerText.includes("专注") || document.getElementById("timerStatus").innerText.includes("休息") || isCurrentPomodoro;
+        const localLabelSpan = document.getElementById("localVideoStatus");
+        if (localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isPomodoro);
+        if (sec % 5 === 0) broadcastTimerStatus(isPomodoro);
+      }
+
+      function updateStatsUI() {
+        document.getElementById("statPomodoros").innerText = totalPomodoros;
+        let h = Math.floor(totalFocusMinutes / 60);
+        let m = totalFocusMinutes % 60;
+        document.getElementById("statFocusTime").innerText = h > 0 ? `${h}h ${m}m` : `${m}m`;
+      }
+
+      function saveTimerStateToLocal() {
+        if (!isTimerRunning && totalSeconds === 0 && sessionAccumulatedSecs === 0) return;
+        const state = { type: isCurrentPomodoro ? "pomodoro" : "stopwatch", savedSeconds: totalSeconds, accumulatedSecs: sessionAccumulatedSecs, task: currentFocusTask };
+        localStorage.setItem("study_timer_state", JSON.stringify(state));
+      }
+
+      function clearTimerState() {
+        localStorage.removeItem("study_timer_state");
+      }
+
+      async function restoreStateOnLoad() {
+        const token = localStorage.getItem("study_token");
+        try {
+          const res = await fetch("/api/records/today", { headers: { Authorization: `Bearer ${token}` } });
+          if (res.ok) {
+            const data = await res.json();
+            totalPomodoros = data.pomodoros;
+            totalFocusMinutes = data.totalMins;
+            updateStatsUI();
+            document.getElementById("timelineContainer").innerHTML = "";
+            data.history.forEach((item) => {
+              if (item.task) appendFocusRecordStr(item.time, item.task, item.mins);
             });
+          }
+        } catch (e) {}
 
-            socket.on('room_update', (data) => {
-                roomDataFromServer = data; 
-                roomUsers = data.users;
-                document.getElementById('userCountDisplay').innerText = roomUsers.length;
-                
-                isHost = (data.host === myUserId);
-                document.getElementById('hostStatusBadge').style.display = isHost ? 'flex' : 'none';
-                document.getElementById('hostChatToggleBtn').style.display = isHost ? 'block' : 'none';
-                
-                renderUserList(data.host);
-                updateAllVideoLabels();
+        const savedStateStr = localStorage.getItem("study_timer_state");
+        if (savedStateStr) {
+          const state = JSON.parse(savedStateStr);
+          if (state.savedSeconds > 0 || state.accumulatedSecs > 0) {
+            totalSeconds = state.savedSeconds;
+            sessionAccumulatedSecs = state.accumulatedSecs || 0;
+            setFocusTask(state.task);
+            isTimerRunning = true;
+            isTimerPaused = true;
+            isCurrentPomodoro = state.type === "pomodoro";
+            recordTaskName = currentFocusTask || (isCurrentPomodoro ? "番茄钟" : "正计时");
 
-                const chatInput = document.getElementById('reflectionInput');
-                const chatBtn = document.getElementById('btnSendChat');
-                const imgBtn = document.querySelector('button[onclick="document.getElementById(\'imageInput\').click()"]');
-                const toggleBtn = document.getElementById('hostChatToggleBtn');
-                
-                if (!data.chatEnabled && !isHost) {
-                    chatInput.disabled = true; chatBtn.disabled = true; imgBtn.disabled = true;
-                    chatInput.placeholder = "主持人已关闭聊天室";
-                } else {
-                    chatInput.disabled = false; chatBtn.disabled = false; imgBtn.disabled = false;
-                    chatInput.placeholder = "发送消息...";
-                }
-                
-                if (isHost) {
-                    toggleBtn.innerText = data.chatEnabled ? "禁言全员" : "解除禁言";
-                    toggleBtn.className = data.chatEnabled ? "styled-btn danger" : "styled-btn";
-                }
-            });
-
-            socket.on('chat_message', (msgData) => {
-                appendMessage(msgData.userName, msgData.message, msgData.time, false, msgData.isImage);
-            });
-
-            // 【中途加入防黑屏修复】新成员加入时，把当前 localStream 里所有的流打包发过去
-            socket.on('user_joined', async (newUserId) => {
-                const pc = createPeerConnection(newUserId);
-                if (localStream) {
-                    localStream.getTracks().forEach(track => {
-                        pc.addTrack(track, localStream);
-                    });
-                }
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                socket.emit('offer', { target: newUserId, caller: myUserId, sdp: offer });
-            });
-            
-            socket.on('offer', async (data) => {
-                const pc = createPeerConnection(data.caller);
-                await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                if (localStream) {
-                    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-                }
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                socket.emit('answer', { target: data.caller, serval: myUserId, sdp: answer });
-            });
-            
-            socket.on('answer', async (data) => {
-                const pc = peerConnections[data.serval];
-                if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            });
-            
-            socket.on('ice-candidate', async (data) => {
-                const pc = peerConnections[data.from];
-                if (pc) await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-            });
-            
-            socket.on('user_left', (userId) => { closePeerConnection(userId); });
-        }
-
-        function editNickname() {
-            const newName = prompt("请输入新昵称 (2-10个字符)：", myNickname);
-            if (newName && newName.trim().length >= 2 && newName.trim().length <= 10) {
-                myNickname = newName.trim();
-                localStorage.setItem('study_nickname', myNickname);
-                document.getElementById('myNameDisplay').innerText = myNickname;
-                socket.emit('update_name', myNickname);
-            } else if (newName !== null) {
-                alert("昵称长度需在 2 到 10 个字符之间！");
-            }
-        }
-
-        function renderUserList(hostId) {
-            const container = document.getElementById('userListContainer');
-            container.innerHTML = '';
-            roomUsers.forEach(id => {
-                const isMe = (id === myUserId);
-                const isThisUserHost = (id === hostId);
-                const customName = isMe ? myNickname : (roomDataFromServer.names[id] || `成员(${id.substring(0,4)})`); 
-                const tag = document.createElement('span');
-                tag.className = 'user-tag';
-                tag.innerHTML = `${customName} ${isThisUserHost ? '<span class="host-badge">主持</span>' : ''}`;
-                if (isHost && !isMe) {
-                    tag.title = "点击移交主持人";
-                    tag.onclick = () => { if(confirm(`移交主持人给 ${customName}？`)) socket.emit('transfer_host', id); };
-                }
-                container.appendChild(tag);
-            });
-        }
-
-        function toggleRoomChat() {
-            const btn = document.getElementById('hostChatToggleBtn');
-            const isCurrentlyEnabled = btn.innerText === "禁言全员";
-            socket.emit('toggle_chat', !isCurrentlyEnabled);
-        }
-
-        function updateAllVideoLabels() {
-            roomUsers.forEach(id => {
-                const isMe = (id === myUserId);
-                const customName = isMe ? myNickname : (roomDataFromServer.names[id] || `成员(${id.substring(0,4)})`);
-                const timerStatus = roomDataFromServer.timers[id] || '暂无专注任务';
-                const videoLabelStr = `<b>${customName}</b><span style="font-size:11px; color:#ddd;">${timerStatus}</span>`;
-
-                const label = isMe ? document.querySelector('#localVideoBox .video-label') : document.querySelector(`#box_${id} .video-label`);
-                if (label) label.innerHTML = videoLabelStr;
-            });
-        }
-
-        // ================= WebRTC 核心与修复 =================
-        // TURN 服务器配置预留位置 (解决非同一局域网黑屏问题)
-        const rtcConfig = { 
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                // 如果部署到外网后不同网络依然黑屏，请在此处申请并添加 TURN 服务凭证
-                // { urls: 'turn:your-turn-server.com:3478', username: 'user', credential: 'password' }
-            ] 
-        };
-
-        function createPeerConnection(remoteUserId) {
-            if (peerConnections[remoteUserId]) return peerConnections[remoteUserId];
-            const pc = new RTCPeerConnection(rtcConfig);
-            peerConnections[remoteUserId] = pc;
-            
-            // 【协商竞态条件修复】增加状态锁，防止并发触发重协商导致底层报错
-            let isNegotiating = false;
-            pc.onsignalingstatechange = () => { isNegotiating = (pc.signalingState !== "stable"); };
-
-            pc.onicecandidate = (event) => {
-                if (event.candidate) socket.emit('ice-candidate', { target: remoteUserId, from: myUserId, candidate: event.candidate });
-            };
-
-            pc.onnegotiationneeded = async () => {
-                if (isNegotiating) return;
-                isNegotiating = true;
-                try {
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    socket.emit('offer', { target: remoteUserId, caller: myUserId, sdp: pc.localDescription });
-                } catch (e) { console.error('协商失败', e); } finally {
-                    isNegotiating = false;
-                }
-            };
-
-            pc.ontrack = (event) => {
-                if (event.track.kind === 'audio') {
-                    let audioEl = document.getElementById(`audio_${event.track.id}`);
-                    if (!audioEl) {
-                        audioEl = document.createElement('audio');
-                        audioEl.id = `audio_${event.track.id}`;
-                        audioEl.autoplay = true;
-                        audioEl.srcObject = new MediaStream([event.track]);
-                        document.body.appendChild(audioEl);
-                        event.track.onended = () => { if (audioEl) audioEl.remove(); };
-                    }
-                }
-
-                let remoteVideoE = document.getElementById(`video_${remoteUserId}`);
-                if (!remoteVideoE) {
-                    const html = `<div class="video-box" id="box_${remoteUserId}" onclick="togglePin('box_${remoteUserId}')">
-                        <video id="video_${remoteUserId}" autoplay playsinline muted></video>
-                        <div class="video-label"><span>加载中...</span></div>
-                    </div>`;
-                    document.getElementById('videoGrid').insertAdjacentHTML('beforeend', html);
-                    remoteVideoE = document.getElementById(`video_${remoteUserId}`);
-                }
-
-                if (remoteVideoE.srcObject !== event.streams[0]) {
-                    remoteVideoE.srcObject = event.streams[0];
-                }
-                
-                updateAllVideoLabels();
-                setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
-            };
-            return pc;
-        }
-
-        function closePeerConnection(userId) {
-            if (peerConnections[userId]) { peerConnections[userId].close(); delete peerConnections[userId]; }
-            const box = document.getElementById(`box_${userId}`);
-            if (box) box.remove();
-            setTimeout(() => arrangeLayout(currentMainId, isLargeMode), 50);
-        }
-
-        // 【同步修复的核心】：不仅仅通过 sender 替换发给老成员，还要把操作记录到 localStream 中，供新成员加入时读取
-        function updateTrackStatus(newTrack, trackType, isSystemAudio = false) {
-            if (!localStream) localStream = new MediaStream();
-            
-            // 找出属于该类型的旧轨道并移除
-            const oldTracks = localStream.getTracks().filter(t => {
-                if (t.kind !== trackType) return false;
-                if (trackType === 'audio') return isSystemAudio ? t === screenAudioTrack : t === micAudioTrack;
-                return true; 
-            });
-            oldTracks.forEach(t => localStream.removeTrack(t));
-
-            // 添加新轨道
-            if (newTrack) localStream.addTrack(newTrack);
-
-            // 更新所有现有的点对点连接
-            Object.values(peerConnections).forEach(pc => {
-                const sender = pc.getSenders().find(s => {
-                    if (!s.track) return false;
-                    if (trackType === 'audio') {
-                        return isSystemAudio ? s.track === screenAudioTrack : s.track === micAudioTrack;
-                    }
-                    return s.track.kind === trackType;
-                });
-
-                if (sender) {
-                    if (newTrack) sender.replaceTrack(newTrack);
-                    else pc.removeTrack(sender); 
-                } else if (newTrack) {
-                    pc.addTrack(newTrack, localStream); // 触发 onnegotiationneeded
-                }
-            });
-        }
-
-        // ================= 媒体设备控制 =================
-        async function toggleCam() {
-            const btn = document.getElementById('btnCam');
-            if (isSharingScreen && !isCamOpen) return alert("请先停止屏幕共享。");
-
-            if (!isCamOpen) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
-                    cameraTrack = stream.getVideoTracks()[0];
-                    
-                    document.getElementById('localVideo').srcObject = new MediaStream([cameraTrack]);
-                    updateTrackStatus(cameraTrack, 'video'); 
-                    
-                    isCamOpen = true;
-                    btn.innerText = "📷 关闭摄像头"; btn.classList.add('active');
-                } catch (err) { alert("无法访问摄像头: " + err.message); }
-            } else {
-                try {
-                    if (cameraTrack) {
-                        cameraTrack.enabled = false; cameraTrack.stop();
-                        updateTrackStatus(null, 'video'); // 通知所有人并从 localStream 移除
-                    }
-                } catch(e) {}
-                isCamOpen = false;
-                btn.innerText = "📷 开启摄像头"; btn.classList.remove('active');
-                
-                const lv = document.getElementById('localVideo');
-                if (lv.srcObject) {
-                    lv.srcObject.getVideoTracks().forEach(t=>t.stop());
-                    lv.srcObject = null;
-                }
-            }
-        }
-
-        async function toggleMic() {
-            const btn = document.getElementById('btnMic');
-            
-            if (!micAudioTrack) {
-                try { 
-                    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true }); 
-                    micAudioTrack = audioStream.getAudioTracks()[0];
-                    micAudioTrack.enabled = false; 
-                } catch(e) { 
-                    return alert("无法获取麦克风权限，请检查浏览器设置！");
-                }
-            }
-            
-            if (!isMicOpen) {
-                micAudioTrack.enabled = true;
-                updateTrackStatus(micAudioTrack, 'audio', false); 
-                isMicOpen = true;
-                btn.innerText = "🎤 关闭麦克风"; btn.classList.add('active');
-            } else {
-                micAudioTrack.enabled = false;
-                updateTrackStatus(null, 'audio', false); 
-                isMicOpen = false;
-                btn.innerText = "🎤 开启麦克风"; btn.classList.remove('active');
-            }
-        }
-
-        async function toggleScreenShare() {
-            const btn = document.getElementById('btnScreen');
-            if (isCamOpen && !isSharingScreen) await toggleCam(); 
-
-            if (!isSharingScreen) {
-                try {
-                    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-                    const screenTrack = stream.getVideoTracks()[0];
-                    screenAudioTrack = stream.getAudioTracks()[0]; 
-
-                    document.getElementById('localVideo').srcObject = new MediaStream([screenTrack]);
-                    
-                    updateTrackStatus(screenTrack, 'video'); 
-                    if (screenAudioTrack) {
-                        updateTrackStatus(screenAudioTrack, 'audio', true); 
-                    }
-
-                    isSharingScreen = true;
-                    btn.innerText = "💻 停止共享"; btn.classList.add('active');
-                    
-                    screenTrack.onended = () => { if(isSharingScreen) toggleScreenShare(); };
-                } catch (err) { console.log("取消共享"); }
-            } else {
-                try {
-                    const src = document.getElementById('localVideo').srcObject;
-                    if (src && src.getVideoTracks().length) src.getVideoTracks()[0].stop();
-                    
-                    updateTrackStatus(null, 'video'); 
-                    if (screenAudioTrack) {
-                        screenAudioTrack.stop();
-                        updateTrackStatus(null, 'audio', true); 
-                        screenAudioTrack = null;
-                    }
-                } catch(e) {}
-                
-                isSharingScreen = false;
-                btn.innerText = "💻 共享屏幕"; btn.classList.remove('active');
-                document.getElementById('localVideo').srcObject = null;
-            }
-        }
-
-        // ================= 视频布局与无缝切换 =================
-        function togglePin(boxId) {
-            if (currentMainId === boxId && isLargeMode) {
-                isLargeMode = false; currentMainId = 'localVideoBox';
-            } else {
-                currentMainId = boxId; isLargeMode = true;
-            }
-            arrangeLayout(currentMainId, isLargeMode);
-        }
-
-        function arrangeLayout(mainId, large) {
-            const grid = document.getElementById('videoGrid');
-            const existingBoxes = Array.from(document.querySelectorAll('.video-box'));
-            let mainBox = existingBoxes.find(b => b.id === mainId) || existingBoxes.find(b => b.id === 'localVideoBox') || existingBoxes[0] || null;
-
-            grid.innerHTML = '';
-            if (!mainBox) return;
-
-            existingBoxes.forEach(b => { 
-                b.style.display = 'flex'; 
-                b.classList.remove('large', 'default-main'); 
-            });
-
-            if (large) mainBox.classList.add('large'); 
-            else mainBox.classList.add('default-main');
-
-            grid.appendChild(mainBox);
-
-            const sidebar = document.createElement('div');
-            sidebar.className = 'video-sidebar';
-            const others = existingBoxes.filter(b => b.id !== mainBox.id);
-
-            if (others.length === 0) sidebar.classList.add('empty');
-            others.forEach(b => { sidebar.appendChild(b); });
-            grid.appendChild(sidebar);
-
-            setTimeout(() => {
-                document.querySelectorAll('.video-box video').forEach(videoEl => {
-                    if (videoEl.paused && videoEl.srcObject) videoEl.play().catch(e => {});
-                });
-            }, 100);
-        }
-
-        // ================= 番茄钟逻辑与任务同步 =================
-        let timerInterval;
-        let totalSeconds = 0; 
-        let isTimerRunning = false;
-        let isTimerPaused = false; 
-
-        function broadcastTimerStatus(isPomodoro) {
-            if (!socket) return;
-            
-            if (!isTimerRunning && !isTimerPaused) {
-                const idleText = currentFocusTask ? `待专注：${currentFocusTask}` : '暂无专注任务';
-                socket.emit('sync_timer', idleText);
-                return;
-            }
-            
-            const taskName = currentFocusTask || (isPomodoro ? "番茄钟" : "正计时");
-            const m = Math.floor(totalSeconds / 60);
-            const s = totalSeconds % 60;
-            const timeStr = isPomodoro ? `剩余${m}分${s}秒` : `已计时${m}分${s}秒`;
-            const stateStr = isTimerPaused ? " (暂停)" : "";
-            
-            socket.emit('sync_timer', `任务：${taskName} | ${timeStr}${stateStr}`);
-        }
-
-        function updateDisplay(sec) {
-            document.getElementById('timeDisplay').innerText = 
-                `${Math.floor(sec / 60).toString().padStart(2, '0')}:${(sec % 60).toString().padStart(2, '0')}`;
-            if (sec % 10 === 0) broadcastTimerStatus(document.getElementById('timerStatus').innerText.includes('🔥'));
-        }
-
-        function setFocusTask(taskName) {
-            currentFocusTask = taskName;
-            const statusEl = document.getElementById('timerStatus');
-            
-            if (isTimerRunning || isTimerPaused) {
-                const isPomodoro = statusEl.innerText.includes('🔥') || statusEl.innerText.includes('暂停');
-                alert(`已将当前专注任务无缝切换为：${taskName}`);
-                broadcastTimerStatus(isPomodoro);
-            } else {
-                statusEl.innerText = `🎯 待专注：${taskName}`;
-                statusEl.style.background = "#e6f7ff";
-                statusEl.style.color = "#1890ff";
-                broadcastTimerStatus(false); 
-            }
-        }
-
-        function startStopwatch() {
-            clearInterval(timerInterval);
-            totalSeconds = 0; isTimerRunning = true; isTimerPaused = false;
-            document.getElementById('timerStatus').innerText = "正计时中...";
-            document.getElementById('timerStatus').style.background = "#e6f7ff";
-            document.getElementById('timerStatus').style.color = "#1890ff";
-            document.getElementById('btnPause').style.display = 'inline-block';
-            document.getElementById('btnPause').innerText = '暂停';
-            
-            broadcastTimerStatus(false);
-            timerInterval = setInterval(() => {
-                if (!isTimerPaused) { totalSeconds++; updateDisplay(totalSeconds); }
-            }, 1000);
-        }
-
-        function startPomodoro() {
-            clearInterval(timerInterval);
-            const mins = parseInt(document.getElementById('focusTime').value) || 25;
-            totalSeconds = mins * 60; isTimerRunning = true; isTimerPaused = false;
-            
-            document.getElementById('timerStatus').innerText = "🔥 专注中...";
-            document.getElementById('timerStatus').style.background = "#fff1f0";
-            document.getElementById('timerStatus').style.color = "#cf1322";
-            document.getElementById('btnPause').style.display = 'inline-block';
-            document.getElementById('btnPause').innerText = '暂停';
+            const btnPause = document.getElementById("btnPause");
+            btnPause.style.display = "inline-block";
+            btnPause.innerText = "继续";
+            document.getElementById("timerStatus").innerText = "⏸️ 已暂停";
             updateDisplay(totalSeconds);
-            broadcastTimerStatus(true);
-            
+
             timerInterval = setInterval(() => {
-                if (!isTimerPaused) {
-                    if (totalSeconds > 0) {
-                        totalSeconds--; updateDisplay(totalSeconds);
-                    } else {
-                        clearInterval(timerInterval); alert("专注结束！开始休息吧。");
-                    }
-                }
-            }, 1000);
-        }
-
-        function togglePauseTimer() {
-            if (!isTimerRunning) return;
-            isTimerPaused = !isTimerPaused;
-            const btn = document.getElementById('btnPause');
-            const status = document.getElementById('timerStatus');
-            const isPomodoro = status.innerText.includes('🔥') || status.innerText.includes('暂停');
-            
-            if (isTimerPaused) {
-                btn.innerText = "继续"; btn.style.background = '#52c41a';
-                status.innerText = "⏸️ 计时已暂停";
-                status.style.background = "#fffbe6"; status.style.color = "#d48806";
-            } else {
-                btn.innerText = "暂停"; btn.style.background = "#faad14";
-                if (isPomodoro) {
-                    status.innerText = "🔥 专注中...";
-                    status.style.background = "#fff1f0"; status.style.color = "#cf1322";
+              if (!isTimerPaused) {
+                sessionAccumulatedSecs++;
+                if (isCurrentPomodoro) {
+                  if (totalSeconds > 0) {
+                    totalSeconds--; updateDisplay(totalSeconds); saveTimerStateToLocal();
+                  } else {
+                    clearInterval(timerInterval); recordFocusSession(true); playAlarmSound(); clearTimerState();
+                    alert("专注结束！开始休息吧。"); 
+                    stopTimer(true);
+                    startBreakTimer(); 
+                  }
                 } else {
-                    status.innerText = "正计时中...";
-                    status.style.background = "#e6f7ff"; status.style.color = "#1890ff";
+                  totalSeconds++; updateDisplay(totalSeconds); saveTimerStateToLocal();
                 }
+              }
+            }, 1000);
+          }
+        }
+      }
+
+      function setFocusTask(taskName) {
+        currentFocusTask = taskName;
+        const statusEl = document.getElementById("timerStatus");
+        const taskDisplayEl = document.getElementById("currentTaskDisplay");
+        taskDisplayEl.innerText = taskName ? `🎯 专注：${taskName}` : "专注：暂无任务";
+
+        const isPomodoro = statusEl.innerText.includes("专注") || statusEl.innerText.includes("暂停") || isCurrentPomodoro;
+        if (isTimerRunning || isTimerPaused) broadcastTimerStatus(isPomodoro);
+        else {
+          statusEl.innerText = `准备就绪`;
+          broadcastTimerStatus(false);
+        }
+
+        const localLabelSpan = document.getElementById("localVideoStatus");
+        if (localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isPomodoro);
+        if (isTimerRunning) saveTimerStateToLocal();
+      }
+
+      async function recordFocusSession(isFinishedPomodoro = false) {
+        const mins = Math.floor(sessionAccumulatedSecs / 60);
+        if (mins >= 1) {
+          totalFocusMinutes += mins;
+          if (isCurrentPomodoro && isFinishedPomodoro) totalPomodoros++;
+          updateStatsUI();
+
+          const now = new Date();
+          const start = new Date(now.getTime() - sessionAccumulatedSecs * 1000);
+          const timeStr = `${start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+          appendFocusRecordStr(timeStr, recordTaskName, mins);
+
+          const token = localStorage.getItem("study_token");
+          if (token) {
+            fetch("/api/records", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ task_name: recordTaskName, duration_mins: mins }),
+            });
+          }
+        }
+        sessionAccumulatedSecs = 0;
+        saveTimerStateToLocal();
+      }
+
+      function appendFocusRecordStr(timeStr, taskName, durationMins) {
+        const html = `<div class="timeline-item"><div class="timeline-time"><span>${timeStr}</span><span style="font-weight:600; color:var(--primary-color);">${durationMins}m</span></div><div class="timeline-task">${taskName}</div></div>`;
+        document.getElementById("timelineContainer").insertAdjacentHTML("afterbegin", html);
+      }
+
+      function startBreakTimer() {
+        clearInterval(timerInterval);
+        const mins = parseInt(document.getElementById("breakTime").value) || 5;
+        totalSeconds = mins * 60; sessionAccumulatedSecs = 0; isTimerRunning = true; isTimerPaused = false;
+        recordTaskName = "休息中"; isCurrentPomodoro = false;
+        document.getElementById("timerStatus").innerText = "☕ 休息中";
+        document.getElementById("btnPause").style.display = "inline-block";
+        document.getElementById("btnPause").innerText = "暂停";
+        updateDisplay(totalSeconds);
+        broadcastTimerStatus(true); 
+        
+        timerInterval = setInterval(() => {
+          if (!isTimerPaused) {
+            if (totalSeconds > 0) {
+              totalSeconds--; updateDisplay(totalSeconds);
+            } else {
+              clearInterval(timerInterval); playAlarmSound();
+              alert("休息结束！准备开始下一个番茄钟吧。");
+              stopTimer(true);
             }
-            broadcastTimerStatus(isPomodoro); 
-        }
+          }
+        }, 1000);
+      }
 
-        function stopTimer() {
-            clearInterval(timerInterval);
-            isTimerRunning = false; isTimerPaused = false;
-            document.getElementById('timerStatus').innerText = "已停止";
-            document.getElementById('timerStatus').style.background = "#f5f5f5";
-            document.getElementById('timerStatus').style.color = "var(--text-secondary)";
-            document.getElementById('btnPause').style.display = 'none';
-            broadcastTimerStatus(false);
-        }
+      function startStopwatch() {
+        clearInterval(timerInterval);
+        totalSeconds = 0; sessionAccumulatedSecs = 0; isTimerRunning = true; isTimerPaused = false;
+        recordTaskName = currentFocusTask || "正计时"; isCurrentPomodoro = false;
+        document.getElementById("timerStatus").innerText = "⏳ 正计时中";
+        document.getElementById("btnPause").style.display = "inline-block";
+        document.getElementById("btnPause").innerText = "暂停";
+        broadcastTimerStatus(false);
+        saveTimerStateToLocal();
 
-        // ================= 聊天室与任务 =================
-        function createList(name) {
-            const listId = `list_${Date.now()}`;
-            const html = `<div style="margin-bottom:10px; border:1px solid #eee; padding:10px; border-radius:8px;">
-                <div style="font-weight:bold; margin-bottom:8px;">📂 ${name || '新清单'}</div>
-                <div style="display:flex; gap:5px;"><input type="text" id="taskInput_${listId}"><button class="styled-btn" onclick="addTask('${listId}')">添加</button></div>
-                <div id="tasks_${listId}" style="margin-top:10px;"></div></div>`;
-            document.getElementById('listsContainer').insertAdjacentHTML('beforeend', html);
+        timerInterval = setInterval(() => {
+          if (!isTimerPaused) {
+            totalSeconds++; sessionAccumulatedSecs++; updateDisplay(totalSeconds); saveTimerStateToLocal();
+          }
+        }, 1000);
+      }
+
+      function startPomodoro() {
+        clearInterval(timerInterval);
+        const mins = parseInt(document.getElementById("focusTime").value) || 25;
+        totalSeconds = mins * 60; sessionAccumulatedSecs = 0; isTimerRunning = true; isTimerPaused = false;
+        recordTaskName = currentFocusTask || "番茄钟"; isCurrentPomodoro = true;
+        document.getElementById("timerStatus").innerText = "🔥 专注中";
+        document.getElementById("btnPause").style.display = "inline-block";
+        document.getElementById("btnPause").innerText = "暂停";
+        updateDisplay(totalSeconds);
+        broadcastTimerStatus(true);
+        saveTimerStateToLocal();
+
+        timerInterval = setInterval(() => {
+          if (!isTimerPaused) {
+            sessionAccumulatedSecs++;
+            if (totalSeconds > 0) {
+              totalSeconds--; updateDisplay(totalSeconds); saveTimerStateToLocal();
+            } else {
+              clearInterval(timerInterval); recordFocusSession(true); playAlarmSound(); clearTimerState();
+              alert("专注结束！开始休息吧。"); 
+              stopTimer(true);
+              startBreakTimer(); 
+            }
+          }
+        }, 1000);
+      }
+
+      function togglePauseTimer() {
+        if (!isTimerRunning) return;
+        isTimerPaused = !isTimerPaused;
+        const btn = document.getElementById("btnPause");
+        const status = document.getElementById("timerStatus");
+        
+        const isResting = status.innerText.includes("休息");
+        if (isTimerPaused) {
+          btn.innerText = "继续"; status.innerText = "⏸️ 已暂停";
+        } else {
+          btn.innerText = "暂停"; 
+          if(isResting) status.innerText = "☕ 休息中";
+          else status.innerText = isCurrentPomodoro ? "🔥 专注中" : "⏳ 正计时中";
         }
         
-        function addTask(listId) {
-            const val = document.getElementById(`taskInput_${listId}`).value;
-            if(!val) return;
-            const taskId = `task_${Date.now()}`;
-            const html = `
-                <div class="task-item" id="${taskId}">
-                    <label style="flex:1; display:flex; align-items:center; gap:8px; cursor:pointer;">
-                        <input type="checkbox" onclick="document.getElementById('${taskId}').classList.toggle('completed')"> 
-                        <span>${val}</span>
-                    </label>
-                    <button class="styled-btn" style="padding: 4px 10px; font-size: 12px; border-radius: 4px; margin-left: 10px;" 
-                            onclick="setFocusTask('${val}')">干它！</button>
-                </div>`;
-            document.getElementById(`tasks_${listId}`).insertAdjacentHTML('beforeend', html);
-            document.getElementById(`taskInput_${listId}`).value = '';
-        }
+        const localLabelSpan = document.getElementById("localVideoStatus");
+        if (localLabelSpan) localLabelSpan.innerText = getTimerStatusString(isCurrentPomodoro || isResting);
+        broadcastTimerStatus(isCurrentPomodoro || isResting);
+        saveTimerStateToLocal();
+      }
 
-        function handleImageUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            if (file.size > 5 * 1024 * 1024) { 
-                alert('图片/GIF 大小不能超过 5MB！');
-                event.target.value = ''; return;
-            }
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const base64Data = e.target.result;
-                const timeStr = new Date().toLocaleTimeString();
-                appendMessage(myNickname, base64Data, timeStr, true, true);
-                if(socket) socket.emit('chat_message', { userName: isHost ? `👑主持人(${myNickname})` : myNickname, message: base64Data, time: timeStr, isImage: true });
-            };
-            reader.readAsDataURL(file);
-            event.target.value = ''; 
-        }
+      function stopTimer(skipRecord = false) {
+        clearInterval(timerInterval);
+        if (!skipRecord) recordFocusSession(false);
+        clearTimerState(); isTimerRunning = false; isTimerPaused = false; sessionAccumulatedSecs = 0;
+        document.getElementById("timerStatus").innerText = "准备就绪";
+        document.getElementById("btnPause").style.display = "none";
+        const localLabelSpan = document.getElementById("localVideoStatus");
+        if (localLabelSpan) localLabelSpan.innerText = getTimerStatusString(false);
+        broadcastTimerStatus(false);
+      }
 
-        function sendReflection() {
-            const input = document.getElementById('reflectionInput');
-            const msg = input.value.trim();
-            if (!msg) return;
-            const timeStr = new Date().toLocaleTimeString();
-            appendMessage(myNickname, msg, timeStr, true, false);
-            if(socket) socket.emit('chat_message', { userName: isHost ? `👑主持人(${myNickname})` : myNickname, message: msg, time: timeStr, isImage: false });
-            input.value = '';
-        }
+      let tasksState = JSON.parse(localStorage.getItem("study_tasks_data")) || [{ id: "default", name: "今日目标", tasks: [] }];
 
-        function appendMessage(user, msg, time, isSelf, isImage = false) {
-            const box = document.getElementById('chatBox');
-            const contentHtml = isImage ? `<img src="${msg}" onclick="window.open(this.src)">` : `<div>${msg}</div>`;
-            box.insertAdjacentHTML('beforeend', `<div class="message ${isSelf ? 'self' : ''}"><div class="msg-meta">${user} ${time}</div>${contentHtml}</div>`);
-            box.scrollTop = box.scrollHeight;
+      function saveTasksData() { localStorage.setItem("study_tasks_data", JSON.stringify(tasksState)); }
+
+      function renderTasks() {
+        const container = document.getElementById("listsContainer");
+        container.innerHTML = "";
+        tasksState.forEach((list) => {
+          const listHtml = `<div style="margin-bottom:15px; border-bottom:var(--divider-dashed); padding-bottom:10px;">
+                <div style="font-weight:600; margin-bottom:10px; font-size:15px; color:var(--text-main); display:flex; justify-content:space-between;">
+                    <span>📂 ${list.name}</span>
+                    <button class="styled-btn danger" style="padding:2px 6px; font-size:12px; opacity:0.8;" onclick="deleteList('${list.id}')">删</button>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="taskInput_${list.id}" placeholder="输入任务内容..." onkeypress="if(event.key==='Enter') addTask('${list.id}')">
+                    <button class="styled-btn" style="padding: 6px 12px;" onclick="addTask('${list.id}')">+</button>
+                </div>
+                <div id="tasks_${list.id}" style="margin-top:12px;">
+                    ${list.tasks.map((t) => `
+                        <div class="task-item ${t.completed ? "completed" : ""}" id="${t.id}">
+                            <label style="flex:1; display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="checkbox" ${t.completed ? "checked" : ""} onclick="toggleTask('${list.id}', '${t.id}')"> 
+                                <span style="font-weight:500;">${t.name}</span>
+                            </label>
+                            <button class="styled-btn" style="padding: 4px 10px; font-size: 12px; border-radius: 4px;" onclick="setFocusTask('${t.name}')">选定</button>
+                            <button class="styled-btn danger" style="padding: 4px 8px; font-size: 12px; border-radius: 4px; margin-left: 4px;" onclick="deleteTask('${list.id}', '${t.id}')">✖</button>
+                        </div>
+                    `).join("")}
+                </div></div>`;
+          container.insertAdjacentHTML("beforeend", listHtml);
+        });
+      }
+
+      function createList(presetName) {
+        let name = typeof presetName === "string" ? presetName : "";
+        if (!name) {
+          const inputEl = document.getElementById("newListInput");
+          if (inputEl) { name = inputEl.value.trim(); inputEl.value = ""; }
         }
-        
-        const _refInput = document.getElementById('reflectionInput');
-        if (_refInput) _refInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendReflection(); });
+        if (!name) name = "新清单";
+        tasksState.push({ id: `list_${Date.now()}`, name: name, tasks: [] });
+        saveTasksData(); renderTasks();
+      }
+
+      function deleteList(listId) {
+        if (confirm("确定删除整个清单吗？")) {
+          tasksState = tasksState.filter((l) => l.id !== listId);
+          saveTasksData(); renderTasks();
+        }
+      }
+
+      function addTask(listId) {
+        const val = document.getElementById(`taskInput_${listId}`).value.trim();
+        if (!val) return;
+        const list = tasksState.find((l) => l.id === listId);
+        if (list) {
+          list.tasks.push({ id: `task_${Date.now()}`, name: val, completed: false });
+          saveTasksData(); renderTasks();
+        }
+      }
+
+      function toggleTask(listId, taskId) {
+        const list = tasksState.find((l) => l.id === listId);
+        if (list) {
+          const task = list.tasks.find((t) => t.id === taskId);
+          if (task) {
+            task.completed = !task.completed;
+            saveTasksData(); renderTasks();
+          }
+        }
+      }
+
+      function deleteTask(listId, taskId) {
+        const list = tasksState.find((l) => l.id === listId);
+        if (list) {
+          list.tasks = list.tasks.filter((t) => t.id !== taskId);
+          saveTasksData(); renderTasks();
+        }
+      }
+
+      // ================= 聊天互动逻辑 =================
+      function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const b64 = e.target.result; const t = new Date().toLocaleTimeString();
+          appendMessage(myNickname, b64, t, true, true);
+          if (socket) socket.emit("chat_message", { userName: isHost ? `👑房主(${myNickname})` : myNickname, message: b64, time: t, isImage: true });
+        };
+        reader.readAsDataURL(file); event.target.value = "";
+      }
+
+      function sendReflection() {
+        const input = document.getElementById("reflectionInput");
+        const msg = input.value.trim();
+        if (!msg) return;
+        const t = new Date().toLocaleTimeString();
+        appendMessage(myNickname, msg, t, true, false);
+        if (socket) socket.emit("chat_message", { userName: isHost ? `👑房主(${myNickname})` : myNickname, message: msg, time: t, isImage: false });
+        input.value = "";
+      }
+
+      function handleNudge(targetUser) {
+        const now = Date.now();
+        if (nudgeCooldowns[targetUser] && now - nudgeCooldowns[targetUser] < 3000) return;
+        nudgeCooldowns[targetUser] = now;
+        const msg = `${myNickname} 拍了拍 ${targetUser}`;
+        appendNudgeMessage(msg);
+        if (socket) socket.emit("chat_message", { userName: myNickname, message: msg, time: new Date().toLocaleTimeString(), isNudge: true });
+      }
+
+      function appendNudgeMessage(msgText) {
+        const box = document.getElementById("chatBox");
+        box.insertAdjacentHTML("beforeend", `<div class="message nudge-msg">${msgText}</div>`);
+        box.scrollTop = box.scrollHeight;
+      }
+
+      function handleMdUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        if (!file.name.toLowerCase().endsWith(".md")) { alert("只支持 Markdown 文件！"); return; }
+        if (file.size > 20 * 1024 * 1024) { alert("MD 文件过大，请限制在 20MB 以内"); return; }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target.result; const t = new Date().toLocaleTimeString();
+          appendMessage(myNickname, content, t, true, false, true, file.name);
+          if (socket) socket.emit("chat_message", {
+              userName: isHost ? `👑房主(${myNickname})` : myNickname,
+              message: content, time: t, isImage: false, isMd: true, fileName: file.name,
+            });
+        };
+        reader.readAsText(file); event.target.value = "";
+      }
+
+      function appendMessage(user, msg, time, isSelf, isImage = false, isMd = false, fileName = '') {
+          const box = document.getElementById('chatBox');
+          let contentHtml = '';
+          
+          if (isImage) {
+              contentHtml = `<img src="${msg}" onclick="window.open(this.src)">`;
+          } else if (isMd) {
+              const encodedUri = encodeURI('data:text/markdown;charset=utf-8,' + msg);
+              let previewHtml = '';
+              if (typeof marked !== 'undefined') {
+                  previewHtml = marked.parse(msg);
+              } else {
+                  previewHtml = msg.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              }
+              
+              contentHtml = `
+                  <a href="${encodedUri}" download="${fileName}" class="md-card" title="点击下载该文件">
+                      📄 <span style="font-weight: 600; color: black;">${fileName}</span>
+                      <div class="md-preview" onclick="event.preventDefault(); event.stopPropagation();">
+                          ${previewHtml}
+                      </div>
+                  </a>`;
+          } else {
+              contentHtml = `<div>${msg.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+          }
+          
+          const safeUser = user.replace(/'/g, "\\'"); 
+          box.insertAdjacentHTML('beforeend', `<div class="message ${isSelf ? 'self' : ''}" ondblclick="handleNudge('${safeUser}')" title="双击拍一拍"><div class="msg-meta">${user} ${time}</div>${contentHtml}</div>`);
+          box.scrollTop = box.scrollHeight;
+      }
     </script>
-</body>
+  </body>
 </html>
