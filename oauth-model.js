@@ -1,6 +1,5 @@
 const crypto = require('crypto');
 
-<<<<<<< HEAD
 // ========== 修改点 1：从环境变量加载配置，强制校验关键信息 ==========
 // 从环境变量读取 OAuth 配置，生产环境通过 PM2/系统变量注入，开发环境从 .env 读取
 const OAUTH_CLIENT_ID = process.env.OAUTH_CLIENT_ID;
@@ -21,15 +20,6 @@ const clients = [
     clientSecret: OAUTH_CLIENT_SECRET, // 敏感密钥从环境变量读取
     grants: ['authorization_code'],
     redirectUris: [OAUTH_REDIRECT_URI], // 回调地址从环境变量读取
-=======
-const clients = [
-  {
-    id: 'memos-client',
-    clientId: 'memos-client',
-    clientSecret: '6666yyds', 
-    grants: ['authorization_code'],
-    redirectUris: ['http://120.25.175.134:5230/auth/callback'], 
->>>>>>> a6ec2488ed9b8840511e10e2e598e1a0090a7695
   }
 ];
 
@@ -100,12 +90,8 @@ module.exports = {
     return token;
   },
   verifyScope: (token, scope) => {
-<<<<<<< HEAD
     // 简化，不校验 scope；生产环境可根据需求扩展
     return true;
-=======
-    return true; 
->>>>>>> a6ec2488ed9b8840511e10e2e598e1a0090a7695
   },
 
 };
