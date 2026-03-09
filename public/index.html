@@ -41,14 +41,13 @@
 
         /* 让“我的 Memos”按钮更明显 */
         .action-btn.memos {
-            { background: transparent; border: none; text-align: left; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: 500; color: var(--text-sec); transition: 0.2s; }
+            background: transparent; border: none; text-align: left; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: 500; color: var(--text-sec); transition: 0.2s;
         }
         .action-btn.memos:hover {
             background: #e2e8f0;
             color: var(--text-main);
         }
         
-
 
         /* 右侧时间轴 */
         .main-content { flex: 1; padding: 30px 40px; overflow-y: auto; background: white; }
@@ -68,6 +67,28 @@
         .task-duration { font-size: 13px; color: var(--text-sec); }
         
         .empty-state { text-align: center; color: var(--text-sec); margin-top: 50px; font-size: 15px; }
+
+        /* 页脚备案链接 — 深灰色，底部居中，不明显 */
+        .icp-footer {
+            position: fixed;
+            bottom: 8px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 12px;
+            color: #a7a4a4;        /* 深灰色 */
+            z-index: 1000;
+            pointer-events: auto;   /* 确保链接可点击 */
+        }
+        .icp-footer a {
+            color: #a7a4a4;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .icp-footer a:hover {
+            color: #a7a4a4;         /* 稍微加深但保持低调 */
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -115,9 +136,15 @@
         </div>
     </div>
 
+    <!-- 底部 ICP 备案号：深灰色、居中、链接至工信部备案系统 -->
+    <div class="icp-footer">
+        <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer">粤ICP备2026022090号</a>
+    </div>
+
     <script>
         let isLoginMode = true;
 
+    
         window.onload = async () => {
             const token = localStorage.getItem('study_token');
             if (token) {
@@ -129,6 +156,9 @@
                 } catch (e) { }
             }
         };
+    
+
+ 
 
         function toggleMode() {
             isLoginMode = !isLoginMode;
@@ -153,17 +183,17 @@
                     document.getElementById('authMessage').innerText = data.error;
                 } else {
                     if (isLoginMode) {
-  localStorage.setItem('study_token', data.token);
-  localStorage.setItem('study_nickname', data.user.nickname);
-  // 检查是否有 redirect 参数
-  const urlParams = new URLSearchParams(window.location.search);
-  const redirect = urlParams.get('redirect');
-  if (redirect) {
-    window.location.href = redirect;
-  } else {
-    showDashboard(data.user);
-  }
-} else {
+                        localStorage.setItem('study_token', data.token);
+                        localStorage.setItem('study_nickname', data.user.nickname);
+                        // 检查是否有 redirect 参数
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const redirect = urlParams.get('redirect');
+                        if (redirect) {
+                            window.location.href = redirect;
+                        } else {
+                            showDashboard(data.user);
+                        }
+                    } else {
                         document.getElementById('authMessage').innerText = '注册成功！请登录。';
                         document.getElementById('authMessage').style.color = '#1dd1a1';
                         setTimeout(() => toggleMode(), 1000);
@@ -232,7 +262,7 @@
         }
 
         function enterRoom(roomId) { window.location.href = `/room.html?room=${roomId}`; }
-        const MEMOS_URL = 'http://120.25.175.134:5230';
+        const MEMOS_URL = 'https://memos.letusstudytogether.online';
         function openMemos() {
             window.open(MEMOS_URL, '_blank', 'noopener,noreferrer');
         }
